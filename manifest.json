@@ -1,0 +1,9 @@
+{
+  "id": "biounix",
+  "name": "BioUnix",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "Run bioinformatics commands, chat with an Agent, and browse skills and memories from BioUnix.",
+  "author": "BioUnix",
+  "isDesktopOnly": true
+}
