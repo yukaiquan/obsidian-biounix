@@ -24,9 +24,9 @@ export function registerFileMenu(plugin: BioUnixPlugin): void {
       if (!(file instanceof TFile)) return;
       if (!isBioFile(file.name)) return;
 
-      // 获取文件在 vault 中的绝对路径
-      const adapter = plugin.app.vault.adapter;
-      const filePath = (adapter as any).getFullPath?.(file.path) || file.path;
+      // 获取文件在 vault 中的绝对路径（getFullPath 仅存在于本地文件系统 adapter）
+      const adapter = plugin.app.vault.adapter as { getFullPath?(p: string): string };
+      const filePath = adapter.getFullPath?.(file.path) || file.path;
 
       menu.addItem(item => {
         item
@@ -79,7 +79,7 @@ async function sendToBioUnix(plugin: BioUnixPlugin, filePath: string, filename: 
       mode: plugin.settings.defaultMode,
     });
 
-    if (!sessionRes.ok) {
+    if (!sessionRes.ok || !sessionRes.session) {
       new Notice(`创建会话失败: ${sessionRes.error}`);
       return;
     }

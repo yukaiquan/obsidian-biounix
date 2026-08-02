@@ -12,7 +12,7 @@
  * - 选择"直接执行" → 不经 Agent，直接 runCommand
  * - 选择"新建会话" → 创建新 session 再发送
  */
-import { MarkdownRenderChild, Notice } from 'obsidian';
+import { MarkdownRenderChild } from 'obsidian';
 import type BioUnixPlugin from './main';
 
 interface ParsedBlock {
@@ -24,10 +24,10 @@ interface ParsedBlock {
 
 interface SessionInfo {
   id: string;
-  name: string;
-  mode: string;
-  model: string | null;
-  startedAt: number;
+  name?: string;
+  mode?: string;
+  model?: string | null;
+  startedAt?: number;
   updated_at?: number;
 }
 
@@ -81,8 +81,7 @@ export class BioUnixCodeBlock extends MarkdownRenderChild {
     // 按钮行
     const btnRow = card.createDiv({ cls: 'biounix-codeblock-btnrow' });
     const execBtn = btnRow.createEl('button', { text: '▶ 执行', cls: 'biounix-codeblock-btn' });
-    const resultEl = card.createDiv({ cls: 'biounix-codeblock-result' });
-    resultEl.style.display = 'none';
+    const resultEl = card.createDiv({ cls: 'biounix-codeblock-result is-hidden' });
 
     execBtn.onclick = async () => {
       execBtn.disabled = true;
@@ -207,7 +206,7 @@ export class BioUnixCodeBlock extends MarkdownRenderChild {
   ): Promise<void> {
     execBtn.disabled = true;
     execBtn.setText('⏳ 执行中...');
-    resultEl.style.display = 'none';
+    resultEl.addClass('is-hidden');
     resultEl.empty();
 
     try {
@@ -218,7 +217,7 @@ export class BioUnixCodeBlock extends MarkdownRenderChild {
       );
       execBtn.disabled = false;
       execBtn.setText('▶ 重新执行');
-      resultEl.style.display = 'block';
+      resultEl.removeClass('is-hidden');
       if (res.ok) {
         const output = res.result?.stdout || res.result?.stderr || '(无输出)';
         const exitCode = res.result?.exit_code;
@@ -233,7 +232,7 @@ export class BioUnixCodeBlock extends MarkdownRenderChild {
     } catch (e) {
       execBtn.disabled = false;
       execBtn.setText('▶ 重试');
-      resultEl.style.display = 'block';
+      resultEl.removeClass('is-hidden');
       resultEl.createEl('pre', {
         text: `❌ ${(e as Error).message}`,
         cls: 'biounix-codeblock-error',
@@ -250,7 +249,7 @@ export class BioUnixCodeBlock extends MarkdownRenderChild {
   ): Promise<void> {
     execBtn.disabled = true;
     execBtn.setText(`⏳ 发送到 ${session.name?.slice(0, 20) || session.id.slice(0, 8)}...`);
-    resultEl.style.display = 'none';
+    resultEl.addClass('is-hidden');
     resultEl.empty();
 
     try {
@@ -261,7 +260,7 @@ export class BioUnixCodeBlock extends MarkdownRenderChild {
       const res = await this.plugin.api.sendMessage(session.id, message);
       execBtn.disabled = false;
       execBtn.setText('▶ 重新执行');
-      resultEl.style.display = 'block';
+      resultEl.removeClass('is-hidden');
 
       if (res.ok) {
         resultEl.createEl('div', {
@@ -278,7 +277,7 @@ export class BioUnixCodeBlock extends MarkdownRenderChild {
     } catch (e) {
       execBtn.disabled = false;
       execBtn.setText('▶ 重试');
-      resultEl.style.display = 'block';
+      resultEl.removeClass('is-hidden');
       resultEl.createEl('pre', {
         text: `❌ ${(e as Error).message}`,
         cls: 'biounix-codeblock-error',
@@ -294,7 +293,7 @@ export class BioUnixCodeBlock extends MarkdownRenderChild {
   ): Promise<void> {
     execBtn.disabled = true;
     execBtn.setText('⏳ 创建会话...');
-    resultEl.style.display = 'none';
+    resultEl.addClass('is-hidden');
     resultEl.empty();
 
     try {
@@ -309,7 +308,7 @@ export class BioUnixCodeBlock extends MarkdownRenderChild {
       });
 
       if (!createRes.ok || !createRes.session) {
-        resultEl.style.display = 'block';
+        resultEl.removeClass('is-hidden');
         resultEl.createEl('pre', {
           text: `❌ 创建会话失败: ${createRes.error}`,
           cls: 'biounix-codeblock-error',
@@ -326,7 +325,7 @@ export class BioUnixCodeBlock extends MarkdownRenderChild {
       const sendRes = await this.plugin.api.sendMessage(sessionId, message);
       execBtn.disabled = false;
       execBtn.setText('▶ 重新执行');
-      resultEl.style.display = 'block';
+      resultEl.removeClass('is-hidden');
 
       if (sendRes.ok) {
         resultEl.createEl('div', {
@@ -347,7 +346,7 @@ export class BioUnixCodeBlock extends MarkdownRenderChild {
     } catch (e) {
       execBtn.disabled = false;
       execBtn.setText('▶ 重试');
-      resultEl.style.display = 'block';
+      resultEl.removeClass('is-hidden');
       resultEl.createEl('pre', {
         text: `❌ ${(e as Error).message}`,
         cls: 'biounix-codeblock-error',

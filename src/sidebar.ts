@@ -3,6 +3,7 @@
  */
 import { ItemView, Notice, WorkspaceLeaf } from 'obsidian';
 import type BioUnixPlugin from './main';
+import type { BioUnixMessage } from './api';
 
 export const BIOUNIX_CHAT_VIEW_TYPE = 'biounix-chat-view';
 
@@ -129,9 +130,9 @@ export class BioUnixChatView extends ItemView {
   onStreamDone(): void {
     // 流式结束，可选加载完整消息
     if (this.sessionId) {
-      this.plugin.api.getMessages(this.sessionId).then(res => {
+      void this.plugin.api.getMessages(this.sessionId).then(res => {
         if (res.ok && res.messages) {
-          this.messages = res.messages.map((m: any) => ({
+          this.messages = res.messages.map((m: BioUnixMessage) => ({
             role: m.role,
             content: m.content,
             timestamp: m.timestamp,

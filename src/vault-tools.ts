@@ -10,7 +10,6 @@
  * 6. 笔记统计 — 文件数、总字数、最近编辑
  */
 import { App, TFile, Notice, parseYaml } from 'obsidian';
-import type BioUnixPlugin from './main';
 
 // ============ 类型定义 ============
 

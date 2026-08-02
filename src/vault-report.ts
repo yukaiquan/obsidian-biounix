@@ -3,7 +3,7 @@
  */
 import { ItemView, WorkspaceLeaf, Notice, TFile } from 'obsidian';
 import type BioUnixPlugin from './main';
-import type { VaultReport, DeadLink, OrphanNote, FrontmatterIssue, BrokenImage, TagEntry } from './vault-tools';
+import type { VaultReport } from './vault-tools';
 
 export const BIOUNIX_VAULT_VIEW_TYPE = 'biounix-vault-report';
 
@@ -98,8 +98,8 @@ export class BioUnixVaultReportView extends ItemView {
     }
 
     // 默认激活第一个有内容的 tab
-    const firstActive = tabBar.querySelector('.biounix-vault-tab') as HTMLElement | null;
-    if (firstActive) {
+    const firstActive = tabBar.querySelector('.biounix-vault-tab');
+    if (firstActive instanceof HTMLElement) {
       firstActive.addClass('active');
       const firstTab = tabs.find(t => t.show);
       if (firstTab) this.renderTab(firstTab.id, tabContent);
@@ -183,7 +183,7 @@ export class BioUnixVaultReportView extends ItemView {
 
     for (const fi of items.slice(0, 100)) {
       const item = list.createDiv({ cls: 'biounix-vault-item' });
-      const badge = item.createEl('span', {
+      item.createEl('span', {
         text: fi.issue,
         cls: `biounix-vault-fm-badge biounix-vault-fm-${fi.issue}`,
       });
@@ -241,7 +241,7 @@ export class BioUnixVaultReportView extends ItemView {
       await leaf.openFile(file);
       if (line) {
         // 延迟一帧确保编辑器已渲染
-        setTimeout(() => {
+        window.setTimeout(() => {
           const editor = this.app.workspace.activeEditor?.editor;
           if (editor) {
             editor.setCursor({ line: line - 1, ch: 0 });

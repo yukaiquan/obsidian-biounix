@@ -7,7 +7,7 @@
  * 3. 侧边栏聊天视图
  * 4. WebSocket 实时流式推送
  */
-import { Plugin, WorkspaceLeaf, Notice } from 'obsidian';
+import { Plugin, Notice } from 'obsidian';
 import { BioUnixAPI } from './api';
 import { BioUnixSettingTab, DEFAULT_SETTINGS, type BioUnixSettings } from './settings';
 import { BioUnixCodeBlock } from './codeblock';
@@ -19,7 +19,6 @@ import { BioUnixVaultReportView, BIOUNIX_VAULT_VIEW_TYPE } from './vault-report'
 export default class BioUnixPlugin extends Plugin {
   settings: BioUnixSettings = DEFAULT_SETTINGS;
   api: BioUnixAPI = new BioUnixAPI(DEFAULT_SETTINGS);
-  private chatView: BioUnixChatView | null = null;
 
   async onload(): Promise<void> {
     await this.loadSettings();
@@ -38,15 +37,12 @@ export default class BioUnixPlugin extends Plugin {
     // 2. 右键菜单
     registerFileMenu(this);
 
-    // 3. 侧边栏视图
-    this.registerView(BIOUNIX_CHAT_VIEW_TYPE, (leaf) => {
-      this.chatView = new BioUnixChatView(leaf, this);
-      return this.chatView;
-    });
+    // 3. 侧边栏视图（直接返回视图实例，不赋值给 plugin 属性，避免内存泄漏）
+    this.registerView(BIOUNIX_CHAT_VIEW_TYPE, (leaf) => new BioUnixChatView(leaf, this));
 
     // 添加侧边栏图标
     this.addRibbonIcon('flask-conical', 'BioUnix Agent', () => {
-      this.activateSidebar();
+      void this.activateSidebar();
     });
 
     // 4. WebSocket 连接
@@ -54,49 +50,47 @@ export default class BioUnixPlugin extends Plugin {
       this.connectWebSocket();
     }
 
-    // 命令面板
+    // 命令面板（命令 name 不含插件名 "BioUnix"，Obsidian 会在 UI 自动显示插件名）
     this.addCommand({
       id: 'open-chat',
-      name: 'Open BioUnix Agent chat',
-      callback: () => this.activateSidebar(),
+      name: 'Open Agent chat',
+      callback: () => void this.activateSidebar(),
     });
 
     this.addCommand({
       id: 'send-current-file',
-      name: 'Send current file to BioUnix Agent',
+      name: 'Send current file to Agent',
       callback: () => {
         const file = this.app.workspace.getActiveFile();
         if (file) {
           const adapter = this.app.vault.adapter as any;
           const filePath = adapter.getFullPath?.(file.path) || file.path;
-          this.api.createSession({ name: `分析: ${file.name}` }).then(res => {
-            if (res.ok) {
-              this.api.sendMessage(res.session.id, `请分析文件: ${filePath}`);
+          void this.api.createSession({ name: `分析: ${file.name}` }).then(res => {
+            if (res.ok && res.session) {
+              void this.api.sendMessage(res.session.id, `请分析文件: ${filePath}`);
             }
           });
         }
       },
     });
 
-    // 5. Vault 检查命令
-    this.registerView(BIOUNIX_VAULT_VIEW_TYPE, (leaf) => {
-      return new BioUnixVaultReportView(leaf, this);
-    });
+    // 5. Vault 检查视图与命令
+    this.registerView(BIOUNIX_VAULT_VIEW_TYPE, (leaf) => new BioUnixVaultReportView(leaf, this));
 
     this.addCommand({
       id: 'vault-scan',
       name: 'Scan vault for issues',
-      callback: () => this.runVaultScan(),
+      callback: () => void this.runVaultScan(),
     });
 
     this.addCommand({
       id: 'vault-report',
       name: 'Open vault report',
-      callback: () => this.activateVaultReport(),
+      callback: () => void this.activateVaultReport(),
     });
 
     this.addRibbonIcon('search', 'Vault 检查', () => {
-      this.runVaultScan();
+      void this.runVaultScan();
     });
   }
 
@@ -117,12 +111,16 @@ export default class BioUnixPlugin extends Plugin {
   /** 连接 WebSocket 接收流式推送 */
   connectWebSocket(): void {
     this.api.connectWS((data) => {
-      if (data.type === 'agent:chunk' && this.chatView) {
-        this.chatView.onStreamChunk(data.content);
-      } else if (data.type === 'agent:done' && this.chatView) {
-        this.chatView.onStreamDone();
-      } else if (data.type === 'agent:error' && this.chatView) {
-        this.chatView.onStreamChunk(`❌ ${data.error}`);
+      const leaves = this.app.workspace.getLeavesOfType(BIOUNIX_CHAT_VIEW_TYPE);
+      const view = leaves[0]?.view;
+      if (view instanceof BioUnixChatView) {
+        if (data.type === 'agent:chunk' && data.content) {
+          view.onStreamChunk(data.content);
+        } else if (data.type === 'agent:done') {
+          view.onStreamDone();
+        } else if (data.type === 'agent:error' && data.error) {
+          view.onStreamChunk(`❌ ${data.error}`);
+        }
       }
     });
   }
@@ -150,8 +148,11 @@ export default class BioUnixPlugin extends Plugin {
     const existing = this.app.workspace.getLeavesOfType(BIOUNIX_VAULT_VIEW_TYPE);
     if (existing.length > 0) {
       this.app.workspace.revealLeaf(existing[0]);
-      if (this.lastReport && existing[0].view instanceof BioUnixVaultReportView) {
-        (existing[0].view as BioUnixVaultReportView).updateReport(this.lastReport);
+      if (this.lastReport) {
+        const view = existing[0].view;
+        if (view instanceof BioUnixVaultReportView) {
+          view.updateReport(this.lastReport);
+        }
       }
       return;
     }
@@ -159,8 +160,11 @@ export default class BioUnixPlugin extends Plugin {
     if (leaf) {
       await leaf.setViewState({ type: BIOUNIX_VAULT_VIEW_TYPE, active: true });
       this.app.workspace.revealLeaf(leaf);
-      if (this.lastReport && leaf.view instanceof BioUnixVaultReportView) {
-        (leaf.view as BioUnixVaultReportView).updateReport(this.lastReport);
+      if (this.lastReport) {
+        const view = leaf.view;
+        if (view instanceof BioUnixVaultReportView) {
+          view.updateReport(this.lastReport);
+        }
       }
     }
   }

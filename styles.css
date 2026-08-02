@@ -35,7 +35,9 @@
   border-radius: 4px;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 }
 
 .biounix-session-item:hover {
@@ -509,6 +511,10 @@
   margin-top: 8px;
   border-top: 1px solid var(--background-modifier-border);
   padding-top: 8px;
+}
+
+.biounix-codeblock-result.is-hidden {
+  display: none;
 }
 
 .biounix-codeblock-output {

@@ -30,7 +30,9 @@ export class BioUnixSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl('h3', { text: 'BioUnix 连接配置' });
+    new Setting(containerEl)
+      .setName('BioUnix 连接配置')
+      .setHeading();
 
     new Setting(containerEl)
       .setName('API 端口')
@@ -87,7 +89,7 @@ export class BioUnixSettingTab extends PluginSettingTab {
           const ok = await this.plugin.api.health();
           btn.setButtonText(ok ? '✅ 已连接' : '❌ 连接失败');
           btn.setDisabled(false);
-          setTimeout(() => { btn.setButtonText('测试'); }, 2000);
+          window.setTimeout(() => { btn.setButtonText('测试'); }, 2000);
         }));
   }
 }

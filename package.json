@@ -1,6 +1,6 @@
 {
   "name": "obsidian-biounix-plugin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "BioUnix integration for Obsidian",
   "main": "dist/main.js",
   "scripts": {
@@ -13,6 +13,7 @@
     "@rollup/plugin-typescript": "^11.0.0",
     "obsidian": "^1.4.0",
     "rollup": "^4.0.0",
+    "tslib": "^2.6.0",
     "typescript": "^5.4.0"
   }
 }
