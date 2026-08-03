@@ -301,11 +301,14 @@ export class BioUnixCodeBlock extends MarkdownRenderChild {
       const sessionName = `CMD: ${cmdText.slice(0, 40)}`;
       const workspace = parsed.cwd ? { kind: 'local' as const, path: parsed.cwd } : undefined;
 
-      const createRes = await this.plugin.api.createSession({
-        name: sessionName,
-        mode: this.plugin.settings.defaultMode,
-        workspace,
-      });
+      const createRes = await this.plugin.api.createSessionWithDefaults(
+        this.plugin.settings,
+        {
+          name: sessionName,
+          mode: this.plugin.settings.defaultMode,
+          workspace,
+        },
+      );
 
       if (!createRes.ok || !createRes.session) {
         resultEl.removeClass('is-hidden');

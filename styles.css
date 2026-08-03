@@ -552,42 +552,168 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+}
+
+.biounix-chat-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.biounix-chat-logo {
+  font-size: 1.3em;
+}
+
+.biounix-chat-title {
   font-weight: 600;
+  font-size: 1em;
+}
+
+.biounix-chat-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.biounix-chat-icon-btn {
+  padding: 4px 6px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.biounix-chat-icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.biounix-chat-icon-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
 }
 
 .biounix-chat-new-btn {
   padding: 4px 10px;
   border: 1px solid var(--interactive-accent);
-  border-radius: 4px;
+  border-radius: 6px;
   background: var(--interactive-accent);
   color: var(--text-on-accent);
   cursor: pointer;
-  font-size: 0.8em;
+  font-size: 0.82em;
+  font-weight: 500;
+}
+
+.biounix-chat-new-btn:hover {
+  opacity: 0.88;
+}
+
+.biounix-chat-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 14px;
+  font-size: 0.75em;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-primary-alt);
+  flex-wrap: wrap;
+}
+
+.biounix-status-connected {
+  color: var(--text-success);
+  font-weight: 500;
+}
+
+.biounix-status-disconnected {
+  color: var(--text-muted);
+}
+
+.biounix-status-sid {
+  color: var(--text-faint);
+  font-family: var(--font-monospace);
+}
+
+.biounix-status-streaming {
+  color: var(--text-accent);
+  font-weight: 500;
 }
 
 .biounix-chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
+  gap: 12px;
+}
+
+.biounix-chat-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
   gap: 8px;
+  opacity: 0.5;
+}
+
+.biounix-chat-empty-icon {
+  font-size: 2.5em;
+}
+
+.biounix-chat-empty-title {
+  font-size: 1em;
+  font-weight: 600;
+}
+
+.biounix-chat-empty-desc {
+  font-size: 0.85em;
+  color: var(--text-muted);
 }
 
 .biounix-chat-bubble {
-  max-width: 90%;
-  padding: 8px 12px;
-  border-radius: 8px;
+  max-width: 92%;
+  padding: 10px 14px;
+  border-radius: 10px;
   font-size: 0.9em;
-  line-height: 1.5;
+  line-height: 1.6;
+  position: relative;
+}
+
+.biounix-chat-role-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.biounix-chat-role-icon {
+  font-size: 1em;
+}
+
+.biounix-chat-role-name {
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
 }
 
 .biounix-chat-user {
   align-self: flex-end;
   background: var(--interactive-accent);
   color: var(--text-on-accent);
+}
+
+.biounix-chat-user .biounix-chat-role-name {
+  color: var(--text-on-accent);
+  opacity: 0.85;
 }
 
 .biounix-chat-assistant {
@@ -608,49 +734,182 @@
   word-break: break-word;
 }
 
-.biounix-chat-time {
-  font-size: 0.7em;
-  opacity: 0.6;
+/* assistant 消息中的 markdown 内容重置 */
+.biounix-chat-assistant .biounix-chat-content {
+  white-space: normal;
+}
+
+.biounix-chat-assistant .biounix-chat-content p {
+  margin: 0.3em 0;
+}
+
+.biounix-chat-assistant .biounix-chat-content pre {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 8px;
+  overflow-x: auto;
+  font-size: 0.85em;
+}
+
+.biounix-chat-assistant .biounix-chat-content code {
+  font-family: var(--font-monospace);
+  font-size: 0.85em;
+}
+
+.biounix-chat-assistant .biounix-chat-content :not(pre) > code {
+  background: var(--background-modifier-border);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.biounix-chat-assistant .biounix-chat-content ul,
+.biounix-chat-assistant .biounix-chat-content ol {
+  margin: 0.3em 0;
+  padding-left: 1.5em;
+}
+
+.biounix-chat-assistant .biounix-chat-content table {
+  border-collapse: collapse;
+  margin: 0.5em 0;
+}
+
+.biounix-chat-assistant .biounix-chat-content th,
+.biounix-chat-assistant .biounix-chat-content td {
+  border: 1px solid var(--background-modifier-border);
+  padding: 4px 8px;
+}
+
+.biounix-chat-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
   margin-top: 4px;
-  text-align: right;
+}
+
+.biounix-chat-time {
+  font-size: 0.68em;
+  opacity: 0.5;
+}
+
+.biounix-chat-copy-btn {
+  padding: 2px 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.biounix-chat-bubble:hover .biounix-chat-copy-btn {
+  opacity: 0.7;
+}
+
+.biounix-chat-copy-btn:hover {
+  opacity: 1 !important;
+  background: var(--background-modifier-hover);
 }
 
 .biounix-chat-input-area {
   display: flex;
-  gap: 8px;
-  padding: 8px 12px;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 14px 10px;
   border-top: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+}
+
+.biounix-chat-input-wrap {
+  display: flex;
+  gap: 8px;
 }
 
 .biounix-chat-input {
   flex: 1;
   resize: none;
-  padding: 8px;
+  padding: 8px 10px;
   border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--background-primary);
   color: var(--text-normal);
   font-size: 0.9em;
   font-family: var(--font-interface);
+  line-height: 1.5;
 }
 
 .biounix-chat-input:focus {
   border-color: var(--interactive-accent);
   outline: none;
+  box-shadow: 0 0 0 1px var(--interactive-accent);
+}
+
+/* 工具栏 */
+.biounix-chat-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.biounix-chat-tool-btn {
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.biounix-chat-tool-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.biounix-chat-tool-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  border-color: var(--background-modifier-border);
+}
+
+.biounix-chat-char-count {
+  margin-left: auto;
+  font-size: 0.72em;
+  color: var(--text-faint);
+  font-family: var(--font-monospace);
+  padding: 2px 6px;
 }
 
 .biounix-chat-send-btn {
-  padding: 8px 16px;
+  align-self: stretch;
+  padding: 8px 18px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--interactive-accent);
   color: var(--text-on-accent);
   cursor: pointer;
   font-size: 0.9em;
+  font-weight: 500;
+  min-width: 64px;
 }
 
 .biounix-chat-send-btn:hover {
-  opacity: 0.85;
+  opacity: 0.88;
+}
+
+/* 停止生成态 */
+.biounix-chat-send-btn.is-stop {
+  background: var(--text-error, #e05252);
+}
+
+.biounix-chat-send-btn.is-stop:hover {
+  opacity: 0.88;
 }
 
 .biounix-chat-notice {
@@ -658,6 +917,8 @@
   font-size: 0.8em;
   color: var(--text-success);
   padding: 4px 8px;
+  background: var(--background-modifier-success);
+  border-radius: 6px;
 }
 
 .biounix-chat-error {
@@ -665,4 +926,1549 @@
   font-size: 0.8em;
   color: var(--text-error);
   padding: 4px 8px;
+  background: var(--background-modifier-error);
+  border-radius: 6px;
+}
+
+/* ============ Obsidian 笔记浏览器 ============ */
+
+.biounix-note-browser {
+  display: flex;
+  flex-direction: column;
+  min-width: 720px;
+  max-width: 90vw;
+}
+
+.biounix-note-browser-title {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.biounix-note-browser-search-row {
+  margin-bottom: 10px;
+}
+
+.biounix-note-browser-search {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 0.9em;
+}
+
+.biounix-note-browser-search:focus {
+  border-color: var(--interactive-accent);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--interactive-accent);
+}
+
+.biounix-note-browser-body {
+  display: flex;
+  gap: 10px;
+  height: 420px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.biounix-note-browser-list {
+  width: 260px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  padding: 4px;
+}
+
+.biounix-note-browser-item {
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 2px;
+}
+
+.biounix-note-browser-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.biounix-note-browser-item.is-selected {
+  background: var(--interactive-accent);
+}
+
+.biounix-note-browser-item.is-active {
+  position: relative;
+}
+
+.biounix-note-browser-item.is-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--interactive-accent);
+  border-radius: 2px;
+}
+
+.biounix-note-browser-item.is-active:not(.is-selected) {
+  background: var(
+    --background-modifier-active-hover,
+    var(--background-modifier-hover)
+  );
+}
+
+.biounix-note-browser-sep {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--background-modifier-border);
+}
+
+.biounix-note-browser-item.is-selected .biounix-note-browser-item-name,
+.biounix-note-browser-item.is-selected .biounix-note-browser-item-path {
+  color: var(--text-on-accent);
+}
+
+.biounix-note-browser-item-name {
+  font-size: 0.85em;
+  font-weight: 500;
+  color: var(--text-normal);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.biounix-note-browser-item-path {
+  font-size: 0.72em;
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.biounix-note-browser-preview {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  background: var(--background-primary);
+}
+
+.biounix-note-browser-preview-path {
+  font-size: 0.75em;
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.biounix-note-browser-preview-content {
+  font-size: 0.88em;
+  line-height: 1.6;
+}
+
+.biounix-note-browser-preview-content pre {
+  background: var(--background-secondary-alt);
+  padding: 8px;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.biounix-note-browser-preview-content code {
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+}
+
+.biounix-note-browser-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.biounix-note-browser-btn {
+  padding: 6px 16px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.biounix-note-browser-btn-secondary {
+  background: var(--background-secondary);
+  color: var(--text-normal);
+}
+
+.biounix-note-browser-btn-secondary:hover {
+  background: var(--background-modifier-hover);
+}
+
+.biounix-note-browser-btn-primary {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+.biounix-note-browser-btn-primary:hover {
+  opacity: 0.88;
+}
+
+.biounix-note-browser-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
+.biounix-note-browser-error {
+  padding: 12px;
+  color: var(--text-error);
+  background: var(--background-modifier-error);
+  border-radius: 6px;
+  font-size: 0.85em;
+}
+
+/* ============ 新建会话模态框 ============ */
+
+.biounix-create-session-modal .biounix-modal-section-title {
+  font-size: 0.85em;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 16px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.biounix-create-session-modal .biounix-modal-section-title:first-child {
+  margin-top: 0;
+}
+
+/* 禁用的工作区设置项（chat 模式） */
+.biounix-create-session-modal .setting-item.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.biounix-create-session-modal .setting-item.is-hidden {
+  display: none;
+}
+
+/* 已保存 API 配置列表（行式：名称+副信息+加载按钮） */
+.biounix-create-session-modal .biounix-profile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.biounix-create-session-modal .biounix-profile-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+}
+
+.biounix-create-session-modal .biounix-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.biounix-create-session-modal .biounix-profile-name {
+  font-size: var(--font-ui-small);
+  font-weight: 500;
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.biounix-create-session-modal .biounix-profile-desc {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.biounix-create-session-modal .biounix-profile-load-btn {
+  flex-shrink: 0;
+  padding: 3px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--interactive-accent);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.biounix-create-session-modal .biounix-profile-load-btn:hover {
+  background: var(--interactive-accent-hover);
+  border-color: var(--interactive-accent-hover);
+}
+
+/* ============ 工具调用卡片 ============ */
+
+.biounix-tool-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.biounix-tool-card {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-secondary);
+  overflow: hidden;
+  font-size: var(--font-ui-smaller);
+}
+
+.biounix-tool-card.is-file-edit {
+  border-left: 3px solid var(--interactive-accent);
+}
+
+.biounix-tool-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.biounix-tool-card-head:hover {
+  background: var(--background-modifier-hover);
+}
+
+.biounix-tool-card-status {
+  font-size: 0.85em;
+}
+
+.biounix-tool-card-status.is-running {
+  animation: biounix-spin 1s linear infinite;
+  display: inline-block;
+}
+
+@keyframes biounix-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.biounix-tool-card-name {
+  font-weight: 600;
+  color: var(--text-normal);
+  font-family: var(--font-monospace);
+}
+
+.biounix-tool-card-path {
+  font-size: var(--font-ui-smaller);
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.biounix-tool-card-undone-badge {
+  font-size: var(--font-ui-smaller);
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--background-modifier-error);
+  color: var(--text-error);
+  font-weight: 600;
+}
+
+.biounix-tool-card-time {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.biounix-tool-card-btns {
+  display: flex;
+  gap: 4px;
+  padding: 0 8px 5px 8px;
+}
+
+.biounix-tool-card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.biounix-tool-card-btn:hover {
+  background: var(--background-modifier-hover);
+}
+
+.biounix-tool-card-btn.is-undo {
+  color: var(--text-warning, #d68a3c);
+  border-color: var(--text-warning, #d68a3c);
+}
+
+.biounix-tool-card-btn.is-undo:hover {
+  background: var(--background-modifier-error);
+}
+
+.biounix-tool-card-btn.is-redo {
+  color: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+}
+
+.biounix-tool-card-btn.is-redo:hover {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.biounix-tool-card-diff {
+  padding: 0 8px 5px 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.biounix-tool-card-bytes {
+  font-family: var(--font-monospace);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.biounix-tool-card-deleted {
+  color: var(--text-error);
+  text-decoration: line-through;
+  font-size: var(--font-ui-smaller);
+}
+
+.biounix-tool-card-detail {
+  border-top: 1px solid var(--background-modifier-border);
+  padding: 6px 8px;
+  background: var(--background-primary);
+}
+
+.biounix-tool-card-detail-label {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+  margin-top: 4px;
+}
+
+.biounix-tool-card-detail-label:first-child {
+  margin-top: 0;
+}
+
+.biounix-tool-card-pre {
+  margin: 0;
+  padding: 4px 6px;
+  background: var(--background-modifier-border);
+  border-radius: 4px;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* ===== 聊天交互增强 ===== */
+
+/* 消息底部操作按钮组 */
+.biounix-chat-footer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.biounix-chat-bubble:hover .biounix-chat-footer {
+  opacity: 1;
+}
+.biounix-chat-time {
+  font-size: 0.7em;
+  color: var(--text-faint);
+  margin-right: auto;
+}
+.biounix-chat-action-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+.biounix-chat-action-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.biounix-chat-action-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* 思维链折叠 */
+.biounix-chat-reasoning {
+  margin-bottom: 8px;
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.biounix-chat-reasoning-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--background-modifier-border);
+  cursor: pointer;
+  font-size: 0.8em;
+  color: var(--text-muted);
+}
+.biounix-chat-reasoning-head:hover {
+  background: var(--background-modifier-hover);
+}
+.biounix-chat-reasoning-icon {
+  display: flex;
+  align-items: center;
+}
+.biounix-chat-reasoning-label {
+  font-weight: 500;
+}
+.biounix-chat-reasoning-toggle {
+  margin-left: auto;
+  color: var(--text-faint);
+}
+.biounix-chat-reasoning-body {
+  padding: 8px 12px;
+  font-size: 0.85em;
+  color: var(--text-muted);
+  border-top: 1px solid var(--background-modifier-border);
+}
+.biounix-chat-reasoning-body p {
+  margin: 4px 0;
+}
+
+/* 代码块增强 */
+.biounix-code-pre {
+  position: relative;
+}
+.biounix-code-toolbar {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 1;
+}
+.biounix-code-lang {
+  font-size: 0.7em;
+  color: var(--text-faint);
+  font-family: var(--font-monospace);
+  text-transform: lowercase;
+  background: var(--background-modifier-border);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+.biounix-code-copy {
+  background: var(--background-modifier-border);
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.biounix-code-copy svg {
+  width: 13px;
+  height: 13px;
+}
+.biounix-code-pre:hover .biounix-code-copy {
+  opacity: 1;
+}
+.biounix-code-copy:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* 会话名（可点击重命名） */
+.biounix-status-session-name {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-normal);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.biounix-status-session-name:hover {
+  background: var(--background-modifier-hover);
+  text-decoration: underline;
+}
+.biounix-status-sep {
+  color: var(--text-faint);
+}
+
+/* 重命名对话框 */
+.biounix-rename-input {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 1em;
+}
+
+/* 快捷指令面板 */
+.biounix-slash-menu {
+  position: fixed;
+  z-index: 1000;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.biounix-slash-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+.biounix-slash-item:hover,
+.biounix-slash-item.is-active {
+  background: var(--background-modifier-hover);
+}
+.biounix-slash-cmd {
+  font-family: var(--font-monospace);
+  font-weight: 600;
+  color: var(--interactive-accent);
+  min-width: 64px;
+}
+.biounix-slash-label {
+  color: var(--text-normal);
+}
+.biounix-slash-desc {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 0.85em;
+}
+
+/* ===== 工具卡片行级 diff 高亮 ===== */
+.biounix-tool-card-diff-loading {
+  color: var(--text-faint);
+  font-size: 0.85em;
+}
+.biounix-diff-summary {
+  font-size: 0.8em;
+  margin-bottom: 4px;
+  font-family: var(--font-monospace);
+}
+.biounix-diff-add-count {
+  color: #4caf50;
+  font-weight: 600;
+}
+.biounix-diff-del-count {
+  color: #f44336;
+  font-weight: 600;
+}
+.biounix-line-diff {
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  background: var(--background-modifier-border);
+  border-radius: 4px;
+  padding: 4px 0;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.biounix-diff-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 0 8px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.biounix-diff-prefix {
+  flex-shrink: 0;
+  width: 14px;
+  color: var(--text-faint);
+  user-select: none;
+}
+.biounix-diff-text {
+  flex: 1;
+}
+.biounix-diff-ctx {
+  color: var(--text-muted);
+}
+.biounix-diff-add {
+  background: rgba(76, 175, 80, 0.12);
+}
+.biounix-diff-add .biounix-diff-prefix {
+  color: #4caf50;
+}
+.biounix-diff-add .biounix-diff-text {
+  color: #4caf50;
+}
+.biounix-diff-del {
+  background: rgba(244, 67, 54, 0.12);
+}
+.biounix-diff-del .biounix-diff-prefix {
+  color: #f44336;
+}
+.biounix-diff-del .biounix-diff-text {
+  color: #f44336;
+}
+
+/* ===== F1 会话管理面板 ===== */
+.biounix-session-panel {
+  position: absolute;
+  top: 90px;
+  left: 8px;
+  right: 8px;
+  max-height: 60%;
+  z-index: 50;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.biounix-session-search {
+  padding: 8px 12px;
+  border: none;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 0.9em;
+}
+.biounix-session-search:focus {
+  outline: none;
+  border-bottom-color: var(--interactive-accent);
+}
+.biounix-session-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
+}
+.biounix-session-loading,
+.biounix-session-empty,
+.biounix-session-error {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 0.9em;
+}
+.biounix-session-item {
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+}
+.biounix-session-item:hover {
+  background: var(--background-modifier-hover);
+}
+.biounix-session-item.is-current {
+  background: var(--background-modifier-border);
+  border-left: 3px solid var(--interactive-accent);
+}
+.biounix-session-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.biounix-session-item-name {
+  font-weight: 500;
+  font-size: 0.9em;
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.biounix-session-item-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+.biounix-session-item-info {
+  font-size: 0.75em;
+  color: var(--text-muted);
+}
+.biounix-session-item-time {
+  font-size: 0.7em;
+  color: var(--text-faint);
+}
+.biounix-session-item-del {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.biounix-session-item:hover .biounix-session-item-del {
+  opacity: 1;
+}
+.biounix-session-item-del:hover {
+  background: rgba(244, 67, 54, 0.15);
+  color: #f44336;
+}
+
+/* ===== F2 消息搜索 ===== */
+.biounix-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: var(--background-secondary);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.biounix-search-input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 0.85em;
+}
+.biounix-search-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+.biounix-search-counter {
+  font-size: 0.8em;
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  min-width: 40px;
+  text-align: center;
+}
+.biounix-search-nav-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.biounix-search-nav-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+.biounix-search-hit {
+  background: rgba(255, 213, 79, 0.5);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.biounix-chat-bubble.is-search-current {
+  box-shadow: 0 0 0 2px var(--interactive-accent);
+  border-radius: 8px;
+}
+
+/* ===== F3 上下文笔记挂载 ===== */
+.biounix-mounted-notes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px 6px 0 0;
+  border-bottom: none;
+}
+.biounix-mounted-notes-label {
+  font-size: 0.75em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.biounix-mounted-note-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: var(--background-modifier-hover);
+  border-radius: 4px;
+  font-size: 0.75em;
+}
+.biounix-mounted-note-name {
+  color: var(--text-normal);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.biounix-mounted-note-rm {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+.biounix-mounted-note-rm:hover {
+  color: #f44336;
+}
+.biounix-mount-search {
+  width: 100%;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 0.9em;
+}
+.biounix-mount-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+.biounix-mount-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.biounix-mount-item:hover {
+  background: var(--background-modifier-hover);
+}
+.biounix-mount-item.is-mounted {
+  color: var(--interactive-accent);
+}
+.biounix-mount-item-icon {
+  width: 16px;
+  text-align: center;
+  font-family: var(--font-monospace);
+}
+.biounix-mount-item-path {
+  font-size: 0.85em;
+  color: var(--text-normal);
+}
+.biounix-mount-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-faint);
+}
+
+/* ===== F5 Agent 执行时间线 ===== */
+.biounix-timeline {
+  min-width: 500px;
+}
+.biounix-timeline-stats {
+  display: flex;
+  gap: 16px;
+  padding: 8px 0 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: 8px;
+  font-size: 0.85em;
+}
+.biounix-timeline-stat-ok {
+  color: #4caf50;
+}
+.biounix-timeline-stat-err {
+  color: #f44336;
+}
+.biounix-timeline-stat-run {
+  color: var(--interactive-accent);
+}
+.biounix-timeline-stat-time {
+  color: var(--text-muted);
+  margin-left: auto;
+  font-family: var(--font-monospace);
+}
+.biounix-timeline-list {
+  max-height: 500px;
+  overflow-y: auto;
+}
+.biounix-timeline-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.biounix-timeline-item:hover {
+  background: var(--background-modifier-hover);
+}
+.biounix-timeline-idx {
+  width: 28px;
+  text-align: right;
+  font-size: 0.75em;
+  color: var(--text-faint);
+  font-family: var(--font-monospace);
+}
+.biounix-timeline-tool {
+  width: 140px;
+  font-size: 0.85em;
+  font-family: var(--font-monospace);
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.biounix-timeline-bar-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.biounix-timeline-bar {
+  height: 18px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  position: relative;
+  min-width: 30px;
+  transition: width 0.3s ease;
+}
+.biounix-timeline-done .biounix-timeline-bar {
+  background: rgba(76, 175, 80, 0.3);
+}
+.biounix-timeline-error .biounix-timeline-bar {
+  background: rgba(244, 67, 54, 0.3);
+}
+.biounix-timeline-running .biounix-timeline-bar {
+  background: rgba(33, 150, 243, 0.3);
+  animation: biounix-pulse 1.5s infinite;
+}
+.biounix-timeline-cancelled .biounix-timeline-bar {
+  background: var(--background-modifier-border);
+}
+@keyframes biounix-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+.biounix-timeline-bar-status {
+  font-size: 0.75em;
+  color: var(--text-normal);
+}
+.biounix-timeline-dur {
+  font-size: 0.75em;
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  white-space: nowrap;
+}
+.biounix-timeline-detail {
+  margin: 6px 0 6px 48px;
+  padding: 8px;
+  background: var(--background-secondary);
+  border-radius: 4px;
+  font-size: 0.8em;
+  width: 100%;
+}
+.biounix-timeline-detail-line {
+  margin: 4px 0;
+  word-break: break-all;
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+}
+
+/* ===== 流式渲染优化 ===== */
+/* 流式期间最后一条 assistant 用纯文本 + 光标，避免每个 chunk 都调 MarkdownRenderer */
+.biounix-chat-streaming-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.biounix-streaming-cursor {
+  display: inline-block;
+  animation: biounix-cursor-blink 1s steps(2) infinite;
+  color: var(--interactive-accent);
+  margin-left: 1px;
+  font-weight: bold;
+}
+@keyframes biounix-cursor-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+/* 流式 bubble 轻微高亮，提示正在生成 */
+.biounix-chat-bubble.is-streaming {
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 1px var(--interactive-accent);
+}
+
+/* ===== 计算资源面板 ===== */
+.biounix-resources {
+  max-width: 640px;
+  min-width: 480px;
+}
+.biounix-resources-loading {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.biounix-resources-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  background: var(--background-secondary);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+.biounix-resources-badge {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75em;
+  font-weight: 600;
+}
+.biounix-resources-device {
+  font-weight: 600;
+  font-size: 0.9em;
+}
+.biounix-resources-path {
+  color: var(--text-muted);
+  font-size: 0.8em;
+  margin-left: auto;
+}
+.biounix-resources-section {
+  margin-bottom: 16px;
+}
+.biounix-resources-section-title {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--text-normal);
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 3px;
+}
+.biounix-resources-section-subtitle {
+  font-size: 0.78em;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 10px 0 4px;
+}
+.biounix-resources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 6px;
+}
+.biounix-resources-metric {
+  background: var(--background-secondary);
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-family: var(--font-monospace);
+}
+.biounix-resources-disk {
+  background: var(--background-secondary);
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 0.78em;
+}
+.biounix-resources-disk-mount {
+  font-weight: 600;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.biounix-resources-disk-bar {
+  height: 3px;
+  background: var(--interactive-accent);
+  border-radius: 2px;
+  margin-bottom: 3px;
+  min-width: 20px;
+}
+.biounix-resources-disk-text {
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+.biounix-resources-runtime {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--background-secondary);
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+}
+.biounix-resources-runtime-icon {
+  color: var(--text-success, #4caf50);
+  font-weight: 700;
+}
+.biounix-resources-runtime-name {
+  font-weight: 600;
+}
+.biounix-resources-runtime-version {
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+}
+.biounix-resources-runtime-extra {
+  color: var(--text-faint);
+  font-size: 0.85em;
+  cursor: help;
+}
+.biounix-resources-runtime-unavailable {
+  margin-top: 6px;
+  font-size: 0.75em;
+  color: var(--text-faint);
+}
+.biounix-resources-partition {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--background-secondary);
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  flex-wrap: wrap;
+}
+.biounix-resources-partition-name {
+  font-weight: 600;
+}
+.biounix-resources-partition-state {
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 0.85em;
+}
+.biounix-slurm-up {
+  background: rgba(76, 175, 80, 0.15);
+  color: var(--text-success, #4caf50);
+}
+.biounix-slurm-down {
+  background: rgba(244, 67, 54, 0.15);
+  color: var(--text-error, #f44336);
+}
+.biounix-resources-partition-nodes,
+.biounix-resources-partition-time,
+.biounix-resources-partition-cpu {
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+.biounix-resources-node {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--background-secondary);
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  flex-wrap: wrap;
+}
+.biounix-node-idle {
+  border-left: 3px solid var(--text-success, #4caf50);
+}
+.biounix-node-mix,
+.biounix-node-alloc {
+  border-left: 3px solid var(--color-yellow, #ffc107);
+}
+.biounix-node-down,
+.biounix-node-fail,
+.biounix-node-failing {
+  border-left: 3px solid var(--text-error, #f44336);
+}
+.biounix-node-drain,
+.biounix-node-draining,
+.biounix-node-reserved,
+.biounix-node-maint {
+  border-left: 3px solid var(--color-orange, #ff9800);
+}
+.biounix-node-unknown,
+.biounix-node-future {
+  border-left: 3px solid var(--text-muted);
+}
+.biounix-resources-node-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
+}
+.biounix-resources-node-state,
+.biounix-resources-node-cpu,
+.biounix-resources-node-mem {
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+.biounix-resources-more {
+  margin-top: 4px;
+  font-size: 0.75em;
+  color: var(--text-faint);
+}
+.biounix-resources-jobs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.biounix-resources-job {
+  display: grid;
+  grid-template-columns: 60px 1fr 80px 70px 90px;
+  gap: 6px;
+  align-items: center;
+  background: var(--background-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.78em;
+}
+.biounix-resources-job-id {
+  font-family: var(--font-monospace);
+  font-weight: 600;
+  color: var(--interactive-accent);
+}
+.biounix-resources-job-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.biounix-resources-job-state {
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+.biounix-resources-job-partition {
+  color: var(--text-faint);
+}
+.biounix-resources-job-time {
+  font-family: var(--font-monospace);
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+.biounix-resources-job-reason {
+  color: var(--color-orange, #ff9800);
+  font-size: 0.85em;
+}
+.biounix-resources-error {
+  padding: 6px 10px;
+  background: rgba(244, 67, 54, 0.1);
+  border-radius: 4px;
+  font-size: 0.8em;
+  color: var(--text-error, #f44336);
+}
+.biounix-resources-empty {
+  padding: 8px;
+  color: var(--text-faint);
+  font-size: 0.8em;
+  text-align: center;
+}
+
+/* 会话配置面板：当前使用模型高亮 */
+.biounix-config-current {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-weight: 600;
+}
+
+/* ============ 远程目录浏览器 ============ */
+.biounix-remote-browser {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 420px;
+}
+
+.biounix-remote-browser-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.biounix-remote-browser-up {
+  flex-shrink: 0;
+}
+
+.biounix-remote-browser-path {
+  flex: 1;
+  font-family: var(--font-monospace);
+  font-size: 0.85em;
+  color: var(--text-muted);
+  background: var(--background-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+.biounix-remote-browser-list {
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+}
+
+.biounix-remote-browser-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: default;
+  border-bottom: 1px solid var(--background-modifier-border);
+  font-size: 0.9em;
+}
+
+.biounix-remote-browser-item:last-child {
+  border-bottom: none;
+}
+
+.biounix-remote-browser-item.is-dir {
+  cursor: pointer;
+}
+
+.biounix-remote-browser-item.is-dir:hover {
+  background: var(--background-modifier-hover);
+}
+
+.biounix-remote-browser-icon {
+  flex-shrink: 0;
+}
+
+.biounix-remote-browser-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.biounix-remote-browser-loading,
+.biounix-remote-browser-empty,
+.biounix-remote-browser-error {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
+.biounix-remote-browser-error {
+  color: var(--text-error);
+}
+
+.biounix-remote-browser-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+/* 面包屑路径 */
+.biounix-remote-browser-path-host {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.biounix-remote-browser-path-sep {
+  color: var(--text-faint);
+  margin: 0 1px;
+}
+.biounix-remote-browser-path-seg {
+  cursor: pointer;
+  color: var(--text-muted);
+  border-radius: 3px;
+  padding: 1px 3px;
+}
+.biounix-remote-browser-path-seg:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+.biounix-remote-browser-path-seg.is-current {
+  color: var(--text-normal);
+  font-weight: 600;
+  cursor: default;
+}
+.biounix-remote-browser-path-seg.is-current:hover {
+  background: transparent;
+}
+
+/* 隐藏文件开关按钮 */
+.biounix-remote-browser-hidden {
+  flex-shrink: 0;
+  font-size: 1em;
+  line-height: 1;
+  padding: 4px 8px;
+  color: var(--text-muted);
+}
+.biounix-remote-browser-hidden.is-active {
+  color: var(--text-accent);
+  background: var(--background-modifier-hover);
+}
+
+/* 文件项置灰（不可进入） */
+.biounix-remote-browser-item.is-file {
+  opacity: 0.5;
+}
+
+/* 错误态重试按钮 */
+.biounix-remote-browser-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.biounix-remote-browser-retry {
+  font-size: 0.85em;
+  padding: 4px 12px;
 }

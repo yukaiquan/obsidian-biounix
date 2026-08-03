@@ -74,7 +74,7 @@ export function registerFileMenu(plugin: BioUnixPlugin): void {
 async function sendToBioUnix(plugin: BioUnixPlugin, filePath: string, filename: string): Promise<void> {
   try {
     // 创建或复用会话
-    const sessionRes = await plugin.api.createSession({
+    const sessionRes = await plugin.api.createSessionWithDefaults(plugin.settings, {
       name: `分析: ${filename}`,
       mode: plugin.settings.defaultMode,
     });
