@@ -287,7 +287,7 @@ export class CreateSessionModal extends Modal {
                 attr: { type: 'button', title: '显示/隐藏' },
             });
             toggleBtn.setText('👁');
-            toggleBtn.style.cssText = 'margin-left:6px;padding:4px 8px;cursor:pointer;background:var(--background-secondary);border:1px solid var(--background-modifier-border);border-radius:4px;';
+            toggleBtn.setCssProps({ marginLeft: '6px', padding: '4px 8px', cursor: 'pointer', background: 'var(--background-secondary)', border: '1px solid var(--background-modifier-border)', borderRadius: '4px' });
             toggleBtn.addEventListener('click', () => {
                 if (text.inputEl.type === 'password') {
                     text.inputEl.type = 'text';

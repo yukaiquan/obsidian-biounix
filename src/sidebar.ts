@@ -8,7 +8,7 @@ import { CreateSessionModal, type CreateSessionInput } from './create-session-mo
 import { NoteBrowserModal } from './note-browser-modal';
 
 // Obsidian 桌面端运行在 Electron，可用 Node.js API（isDesktopOnly: true）
-const nodeOs = require('os') as typeof import('os');
+import * as nodeOs from 'os';
 
 /** 格式化字节数为人类可读 */
 function formatBytes(bytes: number): string {
@@ -171,7 +171,7 @@ export class BioUnixChatView extends ItemView {
     const inputArea = container.createDiv({ cls: 'biounix-chat-input-area' });
     // 挂载笔记标签条（输入框上方）
     this.mountedNotesEl = inputArea.createDiv({ cls: 'biounix-mounted-notes' });
-    this.mountedNotesEl.style.display = 'none';
+    this.mountedNotesEl.setCssProps({ display: 'none' });
     const inputWrap = inputArea.createDiv({ cls: 'biounix-chat-input-wrap' });
     this.inputEl = inputWrap.createEl('textarea', {
       cls: 'biounix-chat-input',
@@ -567,7 +567,7 @@ export class BioUnixChatView extends ItemView {
   /** rAF 节流：同帧多次 chunk 合并为一次增量更新 */
   private scheduleStreamingRender(): void {
     if (this.renderRaf !== null) return;
-    this.renderRaf = requestAnimationFrame(() => {
+    this.renderRaf = window.requestAnimationFrame(() => {
       this.renderRaf = null;
       this.updateStreamingDom();
     });
@@ -744,7 +744,7 @@ export class BioUnixChatView extends ItemView {
           reasonHead.createEl('span', { text: '思维链', cls: 'biounix-chat-reasoning-label' });
           const reasonToggle = reasonHead.createEl('span', { text: '展开', cls: 'biounix-chat-reasoning-toggle' });
           const reasonBody = reasonWrap.createDiv({ cls: 'biounix-chat-reasoning-body' });
-          reasonBody.style.display = 'none';
+          reasonBody.setCssProps({ display: 'none' });
           // 流式时思维链用纯文本（避免每个 chunk 都 MarkdownRenderer）；结束后再渲染
           if (!isStreamingLast && this.mdComponent) {
             void MarkdownRenderer.renderMarkdown(msg.reasoning, reasonBody, '', this.mdComponent);
@@ -754,7 +754,7 @@ export class BioUnixChatView extends ItemView {
           let expanded = false;
           reasonHead.onclick = () => {
             expanded = !expanded;
-            reasonBody.style.display = expanded ? 'block' : 'none';
+            reasonBody.setCssProps({ display: expanded ? 'block' : 'none' });
             reasonToggle.setText(expanded ? '收起' : '展开');
           };
           // 流式时缓存思维链容器引用
@@ -785,7 +785,7 @@ export class BioUnixChatView extends ItemView {
         }
       } else {
         if (this.searchMode && this.searchQuery.trim()) {
-          contentEl.innerHTML = this.highlightSearch(msg.content);
+          this.appendHighlighted(contentEl, msg.content);
         } else {
           contentEl.setText(msg.content);
         }
@@ -1408,7 +1408,7 @@ export class BioUnixChatView extends ItemView {
 
     // 折叠的参数/结果详情（点击头部展开）
     const detailEl = card.createDiv({ cls: 'biounix-tool-card-detail' });
-    detailEl.style.display = 'none';
+    detailEl.setCssProps({ display: 'none' });
     if (tc.args) {
       detailEl.createDiv({ cls: 'biounix-tool-card-detail-label', text: '输入' });
       detailEl.createEl('pre', { cls: 'biounix-tool-card-pre', text: tc.args });
@@ -1594,10 +1594,10 @@ export class BioUnixChatView extends ItemView {
     if (!this.mountedNotesEl) return;
     this.mountedNotesEl.empty();
     if (this.mountedNotes.length === 0) {
-      this.mountedNotesEl.style.display = 'none';
+      this.mountedNotesEl.setCssProps({ display: 'none' });
       return;
     }
-    this.mountedNotesEl.style.display = 'flex';
+    this.mountedNotesEl.setCssProps({ display: 'flex' });
     this.mountedNotesEl.createEl('span', { cls: 'biounix-mounted-notes-label', text: '📎 上下文:' });
     this.mountedNotes.forEach(note => {
       const tag = this.mountedNotesEl!.createDiv({ cls: 'biounix-mounted-note-tag' });
@@ -1748,15 +1748,26 @@ export class BioUnixChatView extends ItemView {
   }
 
   /** 高亮搜索关键词 */
-  private highlightSearch(text: string): string {
-    if (!this.searchMode || !this.searchQuery.trim()) return this.escapeHtml(text);
-    const escapedText = this.escapeHtml(text);
+  /** 高亮搜索关键词（直接向容器追加文本与 <mark> 节点，避免 innerHTML） */
+  private appendHighlighted(container: HTMLElement, text: string): void {
+    container.empty();
+    if (!this.searchMode || !this.searchQuery.trim()) {
+      container.setText(text);
+      return;
+    }
     const q = this.searchQuery.trim();
-    // 对 query 也做 HTML 转义，保证在转义后的文本中匹配
-    const escapedQ = this.escapeHtml(q);
     let regex: RegExp;
-    try { regex = new RegExp(`(${escapedQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'); } catch { return escapedText; }
-    return escapedText.replace(regex, '<mark class="biounix-search-hit">$1</mark>');
+    try { regex = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'); } catch { container.setText(text); return; }
+    let last = 0;
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(text)) !== null) {
+      if (m.index > last) container.appendText(text.slice(last, m.index));
+      const mark = container.createEl('mark', { cls: 'biounix-search-hit', text: m[0] });
+      mark.classList.add('biounix-search-hit');
+      last = m.index + m[0].length;
+      if (m[0].length === 0) regex.lastIndex++; // 防止零宽匹配死循环
+    }
+    if (last < text.length) container.appendText(text.slice(last));
   }
 
   /** HTML 转义 */
@@ -1904,7 +1915,15 @@ export class BioUnixChatView extends ItemView {
       new Notice('正在生成中，请先停止后再删除当前会话');
       return;
     }
-    const confirmed = confirm(`确定删除会话「${name}」？此操作不可撤销。`);
+    const confirmed = await new Promise<boolean>((resolve) => {
+      const modal = new Modal(this.app);
+      modal.titleEl.setText('删除会话');
+      modal.contentEl.createEl('p', { text: `确定删除会话「${name}」？此操作不可撤销。` });
+      const btnRow = modal.contentEl.createDiv({ cls: 'biounix-confirm-btns' });
+      btnRow.createEl('button', { text: '取消' }).addEventListener('click', () => { modal.close(); resolve(false); });
+      btnRow.createEl('button', { text: '删除', cls: 'mod-warning' }).addEventListener('click', () => { modal.close(); resolve(true); });
+      modal.open();
+    });
     if (!confirmed) return;
     try {
       await this.plugin.api.deleteSession(sessionId);
@@ -2022,16 +2041,13 @@ export class BioUnixChatView extends ItemView {
         value: this.sessionName,
         cls: 'biounix-rename-input',
       });
-      input.style.width = '100%';
-      input.style.padding = '8px';
-      input.style.marginTop = '12px';
+      input.setCssProps({ width: '100%', padding: '8px', marginTop: '12px' });
       input.focus();
       input.select();
       const btnRow = modal.contentEl.createDiv({ cls: 'biounix-rename-btns' });
-      btnRow.style.marginTop = '12px';
-      btnRow.style.textAlign = 'right';
+      btnRow.setCssProps({ marginTop: '12px', textAlign: 'right' });
       const cancelBtn = btnRow.createEl('button', { text: '取消' });
-      cancelBtn.style.marginRight = '8px';
+      cancelBtn.setCssProps({ marginRight: '8px' });
       const okBtn = btnRow.createEl('button', { text: '确定', cls: 'mod-cta' });
       cancelBtn.onclick = () => { modal.close(); resolve(null); };
       okBtn.onclick = () => { modal.close(); resolve(input.value); };

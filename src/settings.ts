@@ -56,7 +56,7 @@ export class BioUnixSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     new Setting(containerEl)
-      .setName('BioUnix 连接配置')
+      .setName('连接配置')
       .setHeading();
 
     new Setting(containerEl)

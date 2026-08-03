@@ -12,10 +12,10 @@
  * 直接预填主程序配置，用户无需重复填写。
  */
 
-// 复用 api.ts 已声明的 Node.js require（避免重复声明）
-const nodeFs = require('fs') as typeof import('fs');
-const nodePath = require('path') as typeof import('path');
-const nodeOs = require('os') as typeof import('os');
+// 复用 api.ts 已声明的 Node.js API（ES module import，避免 require）
+import * as nodeFs from 'fs';
+import * as nodePath from 'path';
+import * as nodeOs from 'os';
 
 /** 与主程序 useConfigStore.execution 对齐（仅取插件需要的字段） */
 export interface MainAppExecution {

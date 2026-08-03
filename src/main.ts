@@ -7,7 +7,7 @@
  * 3. 侧边栏聊天视图
  * 4. WebSocket 实时流式推送
  */
-import { Plugin, Notice } from 'obsidian';
+import { Plugin, Notice, requestUrl } from 'obsidian';
 import { BioUnixAPI } from './api';
 import { BioUnixSettingTab, DEFAULT_SETTINGS, type BioUnixSettings } from './settings';
 import { BioUnixCodeBlock } from './codeblock';
@@ -54,9 +54,7 @@ export default class BioUnixPlugin extends Plugin {
       const iconRelPath = `${this.manifest.dir}/icon.png`;
       const iconUrl = this.app.vault.adapter.getResourcePath?.(iconRelPath) || '';
       const img = ribbonIconEl.createEl('img', { attr: { src: iconUrl || 'icon.png' } });
-      img.style.width = '20px';
-      img.style.height = '20px';
-      img.style.objectFit = 'contain';
+      img.setCssProps({ width: '20px', height: '20px', objectFit: 'contain' });
       svg.replaceWith(img);
     }
 
@@ -237,8 +235,8 @@ export default class BioUnixPlugin extends Plugin {
   async testNoteServer(): Promise<boolean> {
     if (!this.noteServer || !this.noteServer.isRunning()) return false;
     try {
-      const res = await fetch(`http://127.0.0.1:${this.settings.noteServerPort}/health`);
-      return res.ok;
+      const res = await requestUrl({ url: `http://127.0.0.1:${this.settings.noteServerPort}/health`, method: 'GET' });
+      return res.status >= 200 && res.status < 300;
     } catch {
       return false;
     }

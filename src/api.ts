@@ -6,9 +6,9 @@ import type { BioUnixSettings } from './settings';
 
 // Obsidian 桌面端运行在 Electron，可访问 Node.js API 读取 vault 外的 token 文件
 // isDesktopOnly: true 保证这些 API 可用
-const nodeFs = require('fs') as typeof import('fs');
-const nodePath = require('path') as typeof import('path');
-const nodeOs = require('os') as typeof import('os');
+import * as nodeFs from 'fs';
+import * as nodePath from 'path';
+import * as nodeOs from 'os';
 
 /** BioUnix 应用数据目录（与后端 getAppDataDir() 保持一致） */
 function getBioUnixDataDir(): string {
@@ -363,7 +363,7 @@ export class BioUnixAPI {
   // ============ WebSocket ============
 
   private wsListener: WSListener | null = null;
-  private wsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private wsReconnectTimer: number | null = null;
   private wsManuallyClosed = false;
 
   connectWS(onMessage: WSListener): void {
@@ -386,8 +386,8 @@ export class BioUnixAPI {
       this.ws = null;
       // 非手动关闭时自动重连（指数退避，上限 5s），避免后端重启/网络抖动后收不到流式
       if (!this.wsManuallyClosed) {
-        if (this.wsReconnectTimer) clearTimeout(this.wsReconnectTimer);
-        this.wsReconnectTimer = setTimeout(() => this.openWS(), 2000);
+        if (this.wsReconnectTimer) window.clearTimeout(this.wsReconnectTimer);
+        this.wsReconnectTimer = window.setTimeout(() => this.openWS(), 2000);
       }
     };
     this.ws.onerror = () => { /* onclose 会处理重连 */ };
@@ -395,7 +395,7 @@ export class BioUnixAPI {
 
   disconnectWS(): void {
     this.wsManuallyClosed = true;
-    if (this.wsReconnectTimer) { clearTimeout(this.wsReconnectTimer); this.wsReconnectTimer = null; }
+    if (this.wsReconnectTimer) { window.clearTimeout(this.wsReconnectTimer); this.wsReconnectTimer = null; }
     if (this.ws) {
       this.ws.close();
       this.ws = null;
