@@ -28,9 +28,9 @@ This plugin integrates [BioUnix](https://github.com/yukaiquan/biounix-electron) 
 
 ### Manual installation
 
-1. Download `main.js`, `manifest.json`, and `styles.css` from the latest [release](https://github.com/yukaiquan/biounix-electron/releases).
+1. Download `main.js`, `manifest.json`, `styles.css`, and `icon.png` from the latest [release](https://github.com/yukaiquan/obsidian-biounix/releases).
 2. Create a folder named `biounix` inside your vault's `.obsidian/plugins/` directory.
-3. Copy the three files into that folder.
+3. Copy the four files into that folder.
 4. Enable the plugin in **Settings → Community plugins**.
 
 ## Usage
