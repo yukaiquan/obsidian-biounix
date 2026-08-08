@@ -6,6 +6,7 @@ import type BioUnixPlugin from './main';
 import type { BioUnixMessage, BioUnixSession } from './api';
 import { CreateSessionModal, type CreateSessionInput } from './create-session-modal';
 import { NoteBrowserModal } from './note-browser-modal';
+import { InteractionModal, type InteractionRequest } from './interaction-modal';
 
 // Obsidian 桌面端运行在 Electron，可用 Node.js API（isDesktopOnly: true）
 import * as nodeOs from 'os';
@@ -77,6 +78,8 @@ export class BioUnixChatView extends ItemView {
   private mdComponent: Component | null = null;
   /** 是否正在流式接收 */
   private streaming = false;
+  /** 正在显示的交互请求 tool_call_id 集合（防止重复弹窗） */
+  private activeInteractionIds: Set<string> = new Set();
   /** 发送按钮元素（streaming 时切换为“停止”按钮） */
   private sendBtnEl: HTMLButtonElement | null = null;
   /** rAF 节流句柄（流式渲染时合并同帧多次 chunk） */
@@ -375,10 +378,15 @@ export class BioUnixChatView extends ItemView {
   /** 连接 WebSocket 接收当前会话的流式输出 */
   private connectWS(): void {
     this.plugin.api.connectWS((data) => {
+      // ★ 调试日志：确认 WS 事件到达插件
+      console.log('[biounix-ws] recv', data.type, 'sid=', (data as { sessionId?: string }).sessionId, 'cur=', this.sessionId);
       if (!this.sessionId) return;
       // 只处理当前会话的事件
       const sid = (data as { sessionId?: string }).sessionId;
-      if (sid && sid !== this.sessionId) return;
+      if (sid && sid !== this.sessionId) {
+        console.log('[biounix-ws] 过滤: 事件 sid != 当前 sessionId');
+        return;
+      }
       if (data.type === 'agent:chunk' && data.content) {
         this.onStreamChunk(data.content);
       } else if (data.type === 'agent:done') {
@@ -397,8 +405,40 @@ export class BioUnixChatView extends ItemView {
         });
       } else if (data.type === 'agent:reasoning' && data.content) {
         this.onReasoningChunk(data.content);
+      } else if (data.type === 'interaction:request') {
+        // AI 需要用户确认/选择：在 Obsidian 中弹出原生 Modal
+        this.onInteractionRequest(data as unknown as InteractionRequest);
       }
     });
+  }
+
+  /** 处理 AI 的确认/选择请求：弹出 Obsidian 原生 Modal */
+  private onInteractionRequest(req: InteractionRequest): void {
+    // 会话过滤：只处理当前会话的交互请求
+    if (req.session_id && this.sessionId && req.session_id !== this.sessionId) {
+      console.log('[biounix-ws] interaction 过滤: 事件 sid != 当前 sessionId');
+      return;
+    }
+    // 防止重复弹出（同一 tool_call_id 多次广播）
+    if (this.activeInteractionIds.has(req.tool_call_id)) return;
+    this.activeInteractionIds.add(req.tool_call_id);
+    // 清理标记（5 分钟超时后允许再次弹出，与后端 5min 超时对齐）
+    window.setTimeout(() => this.activeInteractionIds.delete(req.tool_call_id), 5 * 60 * 1000);
+
+    const modal = new InteractionModal(this.app, this.plugin, req);
+    modal.open();
+    new Notice(`AI 请求${this.interactionLabel(req.tool_name)}`);
+  }
+
+  /** 交互类型的中文名称（用于 Notice 提示） */
+  private interactionLabel(toolName: string): string {
+    const map: Record<string, string> = {
+      confirm_dialog: '确认',
+      select_option: '选择',
+      select_file: '选择文件',
+      select_directory: '选择目录',
+    };
+    return map[toolName] || '交互';
   }
 
   private async sendMessage(): Promise<void> {
@@ -548,7 +588,12 @@ export class BioUnixChatView extends ItemView {
     }
     const last = this.messages[this.messages.length - 1];
     if (last && last.role === 'assistant') {
-      last.content = content;
+      // 首次 chunk：覆盖占位文本（"⏳ 思考中..."）；后续 chunk：追加
+      if (last.content === '⏳ 思考中...' || !last.content) {
+        last.content = content;
+      } else {
+        last.content += content;
+      }
       // 流式首帧：确保流式 bubble 已创建（sendRaw 已 renderMessages 标记 is-streaming）
       if (!this.streamingMdEl) this.renderMessages();
       this.scheduleStreamingRender();

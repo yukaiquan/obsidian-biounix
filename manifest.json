@@ -5,5 +5,6 @@
   "minAppVersion": "1.7.2",
   "description": "Run bioinformatics commands, chat with an Agent, and browse skills and memories from BioUnix.",
   "author": "BioUnix",
-  "isDesktopOnly": true
+  "isDesktopOnly": true,
+  "icon": "icon.png"
 }

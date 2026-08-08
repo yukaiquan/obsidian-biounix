@@ -271,6 +271,22 @@ export class BioUnixAPI {
     return this.request('POST', `/api/sessions/${sessionId}/security`, { level });
   }
 
+  // ============ 交互结果提交（AI 确认/选择） ============
+
+  /**
+   * 提交交互结果（确认/选择/文件选择等）。
+   * 当插件收到 interaction:request WS 事件并弹出 Modal 后，用户操作完成时调用。
+   * @param toolCallId 交互请求的 tool_call_id（来自 WS 事件 payload）
+   * @param result 用户操作结果，结构因 tool_name 而异：
+   *   - confirm_dialog: { approved: boolean, remember?: boolean, cancelled?: boolean }
+   *   - select_option:  { selected: string|string[], custom_text?: string, cancelled?: boolean }
+   *   - select_file:    { path: string, cancelled?: boolean }
+   *   - select_directory: { path: string, cancelled?: boolean }
+   */
+  submitInteraction(toolCallId: string, result: unknown): Promise<RunCommandResult> {
+    return this.request('POST', '/api/interaction/submit', { tool_call_id: toolCallId, result });
+  }
+
   // ============ 命令执行 ============
 
   runCommand(command: string, args: string[], cwd?: string, workspace?: CreateSessionOptions['workspace']): Promise<RunCommandResult> {
