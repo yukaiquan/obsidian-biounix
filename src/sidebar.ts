@@ -1,12 +1,14 @@
 /**
  * 侧边栏视图 — BioUnix Agent 聊天界面
  */
-import { ItemView, Notice, WorkspaceLeaf, MarkdownRenderer, Component, setIcon, Modal } from 'obsidian';
+import { ItemView, Notice, WorkspaceLeaf, MarkdownRenderer, Component, setIcon, Modal, TFile } from 'obsidian';
 import type BioUnixPlugin from './main';
 import type { BioUnixMessage, BioUnixSession } from './api';
 import { CreateSessionModal, type CreateSessionInput } from './create-session-modal';
 import { NoteBrowserModal } from './note-browser-modal';
 import { InteractionModal, type InteractionRequest } from './interaction-modal';
+import { RecordPromptModal } from './record-prompt-modal';
+import { RecordTargetModal, type RecordTarget } from './record-target-modal';
 
 // Obsidian 桌面端运行在 Electron，可用 Node.js API（isDesktopOnly: true）
 import * as nodeOs from 'os';
@@ -94,6 +96,12 @@ export class BioUnixChatView extends ItemView {
   private streamingTextEl: Text | null = null;
   /** 全量渲染后每条消息 bubble 的 DOM 引用（增量更新/搜索定位用） */
   private bubbleEls: HTMLElement[] = [];
+  /** 本次处理过程的记录目标（null=不记录；用户发送前询问） */
+  private recordTarget: RecordTarget | null = null;
+  /** 本次处理过程在 messages 数组中的起始索引（记录起始 user 消息） */
+  private recordStartIdx: number = -1;
+  /** 是否在每次发送时都询问记录（可由设置控制，默认 true） */
+  private askRecordEachTime: boolean = true;
 
   constructor(leaf: WorkspaceLeaf, plugin: BioUnixPlugin) {
     super(leaf);
@@ -148,38 +156,16 @@ export class BioUnixChatView extends ItemView {
     const searchBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: '搜索消息', 'aria-label': '搜索消息' } });
     setIcon(searchBtn, 'search');
     searchBtn.onclick = () => this.toggleSearch();
-    // 次要按钮收纳：更多菜单（时间线/计算资源/会话配置）
-    const moreBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: '更多功能', 'aria-label': '更多功能', 'aria-haspopup': 'menu', 'aria-expanded': 'false' } });
-    setIcon(moreBtn, 'more-horizontal');
-    let moreMenu: HTMLElement | null = null;
-    const closeMoreMenu = () => {
-      if (moreMenu) { moreMenu.remove(); moreMenu = null; moreBtn.setAttribute('aria-expanded', 'false'); }
-    };
-    moreBtn.onclick = (e) => {
-      e.stopPropagation();
-      if (moreMenu) { closeMoreMenu(); return; }
-      moreMenu = headerRight.createDiv({ cls: 'biounix-more-menu', attr: { role: 'menu' } });
-      moreBtn.setAttribute('aria-expanded', 'true');
-      const mkItem = (icon: string, label: string, action: () => void): HTMLElement => {
-        const item = moreMenu!.createEl('button', { cls: 'biounix-more-item', attr: { role: 'menuitem', 'aria-label': label } });
-        const ic = item.createEl('span', { cls: 'biounix-more-item-icon' });
-        setIcon(ic, icon);
-        item.createEl('span', { text: label });
-        item.onclick = () => { closeMoreMenu(); action(); };
-        return item;
-      };
-      mkItem('activity', 'Agent 执行时间线', () => this.showTimeline());
-      mkItem('server', '计算资源', () => this.showResources());
-      mkItem('settings', '会话配置', () => this.showConfig());
-      // 点击菜单外关闭
-      setTimeout(() => {
-        const onDocClick = (ev: MouseEvent) => {
-          if (moreMenu && !moreMenu.contains(ev.target as Node) && ev.target !== moreBtn) closeMoreMenu();
-          if (!moreMenu) document.removeEventListener('click', onDocClick);
-        };
-        document.addEventListener('click', onDocClick);
-      }, 0);
-    };
+    // 次要按钮直接平铺：时间线/计算资源/会话配置（原"更多功能"下拉菜单点击无响应，改为直接展示）
+    const timelineBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: 'Agent 执行时间线', 'aria-label': 'Agent 执行时间线' } });
+    setIcon(timelineBtn, 'activity');
+    timelineBtn.onclick = () => this.showTimeline();
+    const resourcesBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: '计算资源', 'aria-label': '计算资源' } });
+    setIcon(resourcesBtn, 'server');
+    resourcesBtn.onclick = () => this.showResources();
+    const configBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: '会话配置', 'aria-label': '会话配置' } });
+    setIcon(configBtn, 'settings');
+    configBtn.onclick = () => this.showConfig();
     // 新建会话按钮
     const sessionBtn = headerRight.createEl('button', { text: '＋ 新建', cls: 'biounix-chat-new-btn', attr: { 'aria-label': '新建会话' } });
     sessionBtn.onclick = () => this.openCreateSessionModal();
@@ -540,6 +526,148 @@ export class BioUnixChatView extends ItemView {
     }
   }
 
+  /** 询问用户是否记录本次处理过程（返回 Promise<boolean>） */
+  private askRecordPrompt(): Promise<boolean> {
+    return new Promise((resolve) => {
+      const modal = new RecordPromptModal(this.app, (record) => resolve(record));
+      modal.open();
+    });
+  }
+
+  /** 询问用户选择记录目标（返回 Promise<RecordTarget | null>） */
+  private askRecordTarget(): Promise<RecordTarget | null> {
+    return new Promise((resolve) => {
+      const modal = new RecordTargetModal(this.app, (target) => resolve(target));
+      modal.open();
+    });
+  }
+
+  /**
+   * 将本次处理过程（从 recordStartIdx 起的消息）格式化为 Markdown 并写入目标文件。
+   * 仅在 recordTarget 非 null 且 recordStartIdx 有效时执行。写入后重置记录状态。
+   */
+  private async writeRecordIfNeeded(): Promise<void> {
+    if (!this.recordTarget || this.recordStartIdx < 0) return;
+    const target = this.recordTarget;
+    const startIdx = this.recordStartIdx;
+    // 提取本次处理过程的消息
+    const msgs = this.messages.slice(startIdx);
+    if (msgs.length === 0) return;
+    // 重置记录状态（避免重复写入）
+    this.recordTarget = null;
+    this.recordStartIdx = -1;
+
+    const md = this.buildRecordMarkdown(msgs);
+    try {
+      if (target.mode === 'new') {
+        const dir = target.dir || '';
+        const filename = (target.filename || 'biounix-record') + '.md';
+        const fullPath = dir ? `${dir}/${filename}` : filename;
+        // 确保目录存在
+        if (dir) {
+          const folder = this.app.vault.getAbstractFileByPath(dir);
+          if (!folder) {
+            await this.app.vault.createFolder(dir);
+          }
+        }
+        // 文件已存在则追加时间戳避免覆盖
+        let finalPath = fullPath;
+        if (this.app.vault.getAbstractFileByPath(fullPath)) {
+          const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+          finalPath = fullPath.replace(/\.md$/, `-${stamp}.md`);
+        }
+        const file = await this.app.vault.create(finalPath, md);
+        new Notice(`已记录到: ${file.path}`);
+        this.app.workspace.openLinkText(file.path, '', false);
+      } else if (target.mode === 'append' && target.path) {
+        const file = this.app.vault.getAbstractFileByPath(target.path);
+        if (file instanceof TFile) {
+          const existing = await this.app.vault.read(file);
+          const separator = '\n\n---\n\n';
+          const newContent = existing.trimEnd() + separator + md;
+          await this.app.vault.modify(file, newContent);
+          new Notice(`已追加到: ${file.path}`);
+          this.app.workspace.openLinkText(file.path, '', false);
+        } else {
+          // 笔记不存在，降级为新建
+          const file = await this.app.vault.create(target.path, md);
+          new Notice(`笔记不存在，已新建: ${file.path}`);
+          this.app.workspace.openLinkText(file.path, '', false);
+        }
+      }
+    } catch (e) {
+      new Notice(`记录失败: ${(e as Error).message}`);
+    }
+  }
+
+  /** 构建本次处理过程的 Markdown 文本（含对话 + 工具调用 + 思维链） */
+  private buildRecordMarkdown(msgs: ChatMessage[]): string {
+    const lines: string[] = [];
+    const now = new Date();
+    lines.push(`## BioUnix 处理记录 · ${now.toLocaleString('zh-CN', { hour12: false })}`);
+    lines.push('');
+    if (this.sessionInfo) {
+      lines.push(`> 模型: ${this.sessionInfo.provider}/${this.sessionInfo.model} · ${this.sessionInfo.mode === 'agent' ? 'Agent' : 'Chat'}`);
+    }
+    if (this.sessionId) {
+      lines.push(`> 会话: ${this.sessionId.slice(0, 8)}`);
+    }
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+
+    for (const msg of msgs) {
+      const role = msg.role === 'user' ? '🧑 你' : msg.role === 'assistant' ? '🤖 Agent' : 'ℹ️ 系统';
+      const time = new Date(msg.timestamp).toLocaleTimeString('zh-CN', { hour12: false });
+      lines.push(`### ${role}  ·  ${time}`);
+      lines.push('');
+      // 思维链（折叠）
+      if (msg.reasoning) {
+        lines.push('<details><summary>💭 思维链</summary>');
+        lines.push('');
+        lines.push(msg.reasoning);
+        lines.push('');
+        lines.push('</details>');
+        lines.push('');
+      }
+      // 正文
+      if (msg.content) {
+        lines.push(msg.content);
+        lines.push('');
+      }
+      // 工具调用
+      if (msg.toolCalls && msg.toolCalls.length > 0) {
+        for (const tc of msg.toolCalls) {
+          const statusIcon = tc.status === 'done' ? '✓' : tc.status === 'error' ? '✗' : tc.status === 'running' ? '⏳' : '○';
+          const durStr = tc.duration ? ` · ${(tc.duration / 1000).toFixed(1)}s` : '';
+          lines.push(`<details><summary>🔧 ${tc.toolName} ${statusIcon}${durStr}</summary>`);
+          lines.push('');
+          if (tc.args) {
+            lines.push('**输入:**');
+            lines.push('```json');
+            lines.push(tc.args);
+            lines.push('```');
+            lines.push('');
+          }
+          if (tc.result) {
+            lines.push('**输出:**');
+            lines.push('```json');
+            let resultText = tc.result;
+            try { resultText = JSON.stringify(JSON.parse(tc.result), null, 2); } catch { /* */ }
+            lines.push(resultText);
+            lines.push('```');
+            lines.push('');
+          }
+          lines.push('</details>');
+          lines.push('');
+        }
+      }
+      lines.push('---');
+      lines.push('');
+    }
+    return lines.join('\n');
+  }
+
   /** 导出当前对话为 Markdown 文件 */
   private async exportConversation(): Promise<void> {
     if (this.messages.length === 0) {
@@ -709,8 +837,16 @@ export class BioUnixChatView extends ItemView {
             return msg;
           });
           this.renderMessages();
+          // 处理过程结束，若用户选择记录则写入目标文件
+          this.writeRecordIfNeeded();
         }
-      }).catch(() => { /* ignore */ });
+      }).catch(() => {
+        // getMessages 失败时，仍尝试用本地数据写入记录
+        this.writeRecordIfNeeded();
+      });
+    } else {
+      // 无 sessionId（不应发生），兜底
+      this.writeRecordIfNeeded();
     }
   }
 
@@ -974,7 +1110,23 @@ export class BioUnixChatView extends ItemView {
   private async sendRaw(text: string): Promise<void> {
     if (!this.sessionId) { new Notice('请先创建会话'); return; }
     if (!text.trim()) return;
+
+    // 询问是否记录处理过程（仅 agent 模式 + 开启询问时）
+    this.recordTarget = null;
+    this.recordStartIdx = -1;
+    const isAgent = this.sessionInfo?.mode === 'agent';
+    if (isAgent && this.askRecordEachTime) {
+      const shouldRecord = await this.askRecordPrompt();
+      if (shouldRecord) {
+        const target = await this.askRecordTarget();
+        if (target) {
+          this.recordTarget = target;
+        }
+      }
+    }
+
     this.messages.push({ role: 'user', content: text, timestamp: Date.now() });
+    this.recordStartIdx = this.messages.length - 1;
     const assistantMsg: ChatMessage = { role: 'assistant', content: '⏳ 思考中...', timestamp: Date.now() };
     this.messages.push(assistantMsg);
     this.streaming = true;

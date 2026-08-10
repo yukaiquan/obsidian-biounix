@@ -2835,3 +2835,223 @@ body.theme-dark .biounix-code-block {
     transition: none;
   }
 }
+
+/* ===== 记录处理过程询问模态框 ===== */
+.biounix-record-prompt-modal {
+  max-width: 420px;
+}
+.biounix-record-prompt-modal h2 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+}
+.biounix-record-prompt-desc {
+  margin: 0 0 20px 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.biounix-record-prompt-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.biounix-record-prompt-btn {
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  border: 1px solid var(--background-modifier-border);
+}
+.biounix-record-prompt-btn-primary {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+.biounix-record-prompt-btn-primary:hover {
+  background: var(--interactive-accent-hover);
+}
+.biounix-record-prompt-btn-secondary {
+  background: var(--background-secondary);
+  color: var(--text-normal);
+}
+.biounix-record-prompt-btn-secondary:hover {
+  background: var(--background-modifier-hover);
+}
+
+/* ===== 记录目标选择模态框 ===== */
+.biounix-record-target-modal {
+  max-width: 520px;
+}
+.biounix-record-target-modal h2 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+}
+.biounix-record-target-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.biounix-record-target-tab {
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+}
+.biounix-record-target-tab.is-active {
+  color: var(--text-normal);
+  border-bottom-color: var(--interactive-accent);
+}
+.biounix-record-target-body {
+  min-height: 200px;
+}
+.biounix-record-target-panel {
+  padding: 4px 0;
+}
+.biounix-record-target-label {
+  margin: 8px 0 6px 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.biounix-record-target-dir-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.biounix-record-target-dir-display {
+  flex: 1;
+  padding: 8px 10px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.biounix-record-target-dir-btn {
+  padding: 8px 14px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.biounix-record-target-dir-btn:hover {
+  background: var(--background-modifier-hover);
+}
+.biounix-record-target-dir-dropdown {
+  margin-top: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  position: relative;
+  z-index: 10;
+}
+.biounix-record-target-dir-item {
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.biounix-record-target-dir-item:hover {
+  background: var(--background-modifier-hover);
+}
+.biounix-record-target-filename {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+.biounix-record-target-search {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+}
+.biounix-record-target-note-list {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+}
+.biounix-record-target-note-item {
+  padding: 8px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.biounix-record-target-note-item:last-child {
+  border-bottom: none;
+}
+.biounix-record-target-note-item:hover {
+  background: var(--background-modifier-hover);
+}
+.biounix-record-target-note-item.is-selected {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+.biounix-record-target-note-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+.biounix-record-target-note-path {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.biounix-record-target-note-item.is-selected .biounix-record-target-note-path {
+  color: var(--text-on-accent);
+  opacity: 0.8;
+}
+.biounix-record-target-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.biounix-record-target-footer {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+.biounix-record-target-confirm {
+  padding: 8px 20px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.biounix-record-target-confirm:hover {
+  background: var(--interactive-accent-hover);
+}
+.biounix-record-target-cancel {
+  padding: 8px 20px;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.biounix-record-target-cancel:hover {
+  background: var(--background-modifier-hover);
+}
