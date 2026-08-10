@@ -96,12 +96,12 @@ export class BioUnixChatView extends ItemView {
   private streamingTextEl: Text | null = null;
   /** 全量渲染后每条消息 bubble 的 DOM 引用（增量更新/搜索定位用） */
   private bubbleEls: HTMLElement[] = [];
-  /** 本次处理过程的记录目标（null=不记录；用户发送前询问） */
+  /** 会话级记录决定：'unset'=未询问, 'yes'=记录, 'no'=不记录。首次发送时询问一次，整个会话复用 */
+  private recordDecision: 'unset' | 'yes' | 'no' = 'unset';
+  /** 会话级记录目标（recordDecision='yes' 时设置，整个会话复用同一目标） */
   private recordTarget: RecordTarget | null = null;
-  /** 本次处理过程在 messages 数组中的起始索引（记录起始 user 消息） */
+  /** 本次处理过程在 messages 数组中的起始索引（每次发送时更新，用于写入本次处理范围） */
   private recordStartIdx: number = -1;
-  /** 是否在每次发送时都询问记录（可由设置控制，默认 true） */
-  private askRecordEachTime: boolean = true;
 
   constructor(leaf: WorkspaceLeaf, plugin: BioUnixPlugin) {
     super(leaf);
@@ -349,6 +349,10 @@ export class BioUnixChatView extends ItemView {
       const session = createRes.session;
       this.sessionId = session.id;
       this.messages = [];
+      // 新建会话：重置记录决定（首次发送时重新询问）
+      this.recordDecision = 'unset';
+      this.recordTarget = null;
+      this.recordStartIdx = -1;
 
       // 2) 补全会话配置（apiConfig 通过 PUT 写回，保证后端持久化与主程序一致）
       await this.plugin.api.updateSession(session.id, {
@@ -553,8 +557,7 @@ export class BioUnixChatView extends ItemView {
     // 提取本次处理过程的消息
     const msgs = this.messages.slice(startIdx);
     if (msgs.length === 0) return;
-    // 重置记录状态（避免重复写入）
-    this.recordTarget = null;
+    // ★ 会话级复用：仅重置本次起始索引，不重置 recordDecision/recordTarget
     this.recordStartIdx = -1;
 
     const md = this.buildRecordMarkdown(msgs);
@@ -1111,17 +1114,21 @@ export class BioUnixChatView extends ItemView {
     if (!this.sessionId) { new Notice('请先创建会话'); return; }
     if (!text.trim()) return;
 
-    // 询问是否记录处理过程（仅 agent 模式 + 开启询问时）
-    this.recordTarget = null;
-    this.recordStartIdx = -1;
+    // 会话级询问：仅首次发送（recordDecision='unset'）且 agent 模式时询问一次，整个会话复用该决定
     const isAgent = this.sessionInfo?.mode === 'agent';
-    if (isAgent && this.askRecordEachTime) {
+    if (isAgent && this.recordDecision === 'unset') {
       const shouldRecord = await this.askRecordPrompt();
       if (shouldRecord) {
         const target = await this.askRecordTarget();
         if (target) {
+          this.recordDecision = 'yes';
           this.recordTarget = target;
+        } else {
+          // 用户取消选择目标 → 视为不记录
+          this.recordDecision = 'no';
         }
+      } else {
+        this.recordDecision = 'no';
       }
     }
 
@@ -2093,6 +2100,10 @@ export class BioUnixChatView extends ItemView {
     this.sessionId = sessionId;
     this.messages = [];
     this.streaming = false;
+    // 切换会话：重置记录决定（首次发送时重新询问）
+    this.recordDecision = 'unset';
+    this.recordTarget = null;
+    this.recordStartIdx = -1;
     // 加载会话信息
     try {
       const infoRes = await this.plugin.api.getSession(sessionId);
