@@ -14,7 +14,8 @@
 import { App, Modal, Notice, Setting } from 'obsidian';
 import type BioUnixPlugin from './main';
 import type { BioUnixSettings } from './settings';
-import { readMainExecution, readMainApiProfiles, type MainApiProfile } from './config-reader';
+import { readMainExecution, readMainApiProfiles, fetchMainExecution, fetchMainApiProfiles, type MainApiProfile } from './config-reader';
+import { requestUrl } from 'obsidian';
 
 /** 创建会话时收集的完整参数 */
 export interface CreateSessionInput {
@@ -105,6 +106,34 @@ export class CreateSessionModal extends Modal {
         };
         // ★ 异步从后端加载已保存的 SSH 会话（后端用 safeStorage 解密密码后返回）
         void this.loadSavedSshSessions();
+        // ★ 异步通过 HTTP 拉取主程序最新 LLM 配置（最可靠路径，绕过 leveldb 压缩/文件未推送问题）
+        void this.loadMainConfigFromBackend();
+    }
+
+    /** 异步从主程序后端 HTTP 拉取 LLM 配置，加载后刷新表单（若已渲染） */
+    private async loadMainConfigFromBackend(): Promise<void> {
+        try {
+            const [mainExec, profiles] = await Promise.all([
+                fetchMainExecution(requestUrl),
+                fetchMainApiProfiles(requestUrl),
+            ]);
+            if (mainExec) {
+                this.input.provider = (mainExec.llmProvider as BioUnixSettings['llmProvider']) || this.input.provider;
+                this.input.apiKey = mainExec.apiKey || this.input.apiKey;
+                this.input.model = mainExec.model || this.input.model;
+                this.input.customEndpoint = this.input.provider === 'local'
+                    ? (mainExec.localEndpoint || this.input.customEndpoint)
+                    : (mainExec.useCustomEndpoint ? (mainExec.customEndpoint || '') : this.input.customEndpoint);
+            }
+            if (profiles.length > 0) {
+                this.apiProfiles = profiles;
+            }
+            // 若表单已渲染，刷新依赖 provider 的控件与配置列表
+            if (this.profileListEl) {
+                this.rebuildProviderDependentControls();
+                this.rebuildProfileButtons();
+            }
+        } catch { /* 主程序未运行或接口不可用，保持同步读取的初始值 */ }
     }
 
     /** 从后端加载已保存的远程 SSH 会话，加载完后若当前在 remote 视图则重建表单 */

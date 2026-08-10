@@ -44,14 +44,28 @@ cp icon.png           release/icon.png
 echo "==> release/ 目录内容:"
 ls -la release/
 
-# 校验：manifest 引用的 icon 文件确实存在于 release/
-ICON_FIELD=$(grep -o '"icon"[[:space:]]*:[[:space:]]*"[^"]*"' release/manifest.json | sed 's/.*"icon"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+# Validate: manifest icon reference exists in release/
+# Supports both "icon" and "iconUrl" fields
+ICON_FIELD=$(grep -o '"iconUrl"[[:space:]]*:[[:space:]]*"[^"]*"' release/manifest.json 2>/dev/null | sed 's/.*"iconUrl"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || true)
+if [[ -z "$ICON_FIELD" ]]; then
+    ICON_FIELD=$(grep -o '"icon"[[:space:]]*:[[:space:]]*"[^"]*"' release/manifest.json 2>/dev/null | sed 's/.*"icon"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || true)
+fi
+# Validate: manifest icon reference exists in release/
+# Supports both "icon" and "iconUrl" fields
+ICON_FIELD=$(grep -o '"iconUrl"[[:space:]]*:[[:space:]]*"[^"]*"' release/manifest.json 2>/dev/null | sed 's/.*"iconUrl"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || true)
+if [[ -z "$ICON_FIELD" ]]; then
+    ICON_FIELD=$(grep -o '"icon"[[:space:]]*:[[:space:]]*"[^"]*"' release/manifest.json 2>/dev/null | sed 's/.*"icon"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || true)
+fi
 if [[ -n "$ICON_FIELD" ]]; then
-    if [[ ! -f "release/$ICON_FIELD" ]]; then
-        echo "✗ 错误: manifest.json 引用 icon \"$ICON_FIELD\"，但 release/ 中不存在该文件！"
+    # Remote URL: skip local check (icon.png already copied to release/)
+    if [[ "$ICON_FIELD" == http* ]]; then
+        echo "ok: icon is remote URL: $ICON_FIELD (icon.png bundled in release/)"
+    elif [[ ! -f "release/$ICON_FIELD" ]]; then
+        echo "ERROR: manifest.json references icon \"$ICON_FIELD\" but file not in release/"
         exit 1
+    else
+        echo "ok: icon verified: release/$ICON_FIELD"
     fi
-    echo "✓ 图标校验通过: release/$ICON_FIELD"
 fi
 
 if [[ "$UPLOAD" == "true" ]]; then

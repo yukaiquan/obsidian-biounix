@@ -83,6 +83,11 @@ export interface MainSavedSession {
  * leveldb 在主程序运行时被锁定，无法用 classic-level 打开，
  * 因此这里用纯字节解析：在 .log(WAL)/.ldb(SSTable) 文件中搜索
  * "app-config-storage" key 对应的 {"state":...} JSON 并按括号匹配提取。
+ *
+ * ★ 注意：Chromium 新版本对 leveldb value 启用 snappy/内部压缩，导致
+ * 纯字节解析可能失败（JSON 中穿插压缩 back-reference 字节）。
+ * 因此优先读主程序前端推送的明文 JSON（main-config.json），
+ * leveldb 解析仅作 fallback。
  */
 function getLeveldbDir(): string {
     const home = nodeOs.homedir();
@@ -94,12 +99,48 @@ function getLeveldbDir(): string {
     return nodePath.join(home, '.config', 'biounix-electron', 'Local Storage', 'leveldb');
 }
 
+/** 主程序应用数据目录（与主程序 paths.ts getAppDataDir 一致） */
+function getMainAppDataDir(): string {
+    const home = nodeOs.homedir();
+    if (process.platform === 'darwin') {
+        return nodePath.join(home, 'Library', 'Application Support', 'biounix');
+    } else if (process.platform === 'win32') {
+        return nodePath.join(process.env.APPDATA || nodePath.join(home, 'AppData', 'Roaming'), 'biounix');
+    }
+    return nodePath.join(home, '.local', 'share', 'biounix');
+}
+
+/**
+ * ★ 优先读取主程序前端推送的明文配置 JSON（main-config.json）。
+ * 主程序 useConfigStore 在 rehydrate/subscribe 时通过 IPC 写入，
+ * 避免 leveldb 压缩导致解析失败。失败返回 null。
+ */
+function readMainConfigJson(): MainAppConfig | null {
+    try {
+        const file = nodePath.join(getMainAppDataDir(), 'main-config.json');
+        if (!nodeFs.existsSync(file)) return null;
+        const raw = nodeFs.readFileSync(file, 'utf8');
+        const parsed = JSON.parse(raw) as { execution?: MainAppExecution; apiProfiles?: MainApiProfile[]; savedSessions?: MainSavedSession[] };
+        if (!parsed.execution && !parsed.apiProfiles && !parsed.savedSessions) return null;
+        return {
+            execution: parsed.execution,
+            apiProfiles: parsed.apiProfiles,
+            savedSessions: parsed.savedSessions,
+        };
+    } catch {
+        return null;
+    }
+}
+
 /**
  * 从 leveldb 文件（.log/.ldb）中提取 app-config-storage 的 JSON。
  * 按文件修改时间倒序查找，返回最新的一份。
  * 失败时返回 null。
  */
 export function readMainAppConfig(): MainAppConfig | null {
+    // ★ 优先读主程序前端推送的明文 JSON（绕过 leveldb 压缩）
+    const jsonCfg = readMainConfigJson();
+    if (jsonCfg) return jsonCfg;
     try {
         const dbDir = getLeveldbDir();
         if (!nodeFs.existsSync(dbDir)) return null;
@@ -168,4 +209,67 @@ export function readMainApiProfiles(): MainApiProfile[] {
 export function readMainSavedSessions(): MainSavedSession[] {
     const sessions = readMainAppConfig()?.savedSessions || [];
     return [...sessions].sort((a, b) => b.lastUsed - a.lastUsed);
+}
+
+// ============ 异步 HTTP 拉取（最可靠路径） ============
+// 主程序暴露 GET /api/main-config，优先读明文 JSON，文件缺失时回退到 renderer 内存。
+// 这条路径不依赖 leveldb 解析（snappy 压缩问题）也不依赖文件已推送成功，
+// 只要主程序在运行即可拿到配置。
+
+/** 读取 api-port 文件（主程序运行端口） */
+function readApiPort(): number | null {
+    try {
+        const file = nodePath.join(getMainAppDataDir(), 'api-port');
+        if (!nodeFs.existsSync(file)) return null;
+        const port = parseInt(nodeFs.readFileSync(file, 'utf8').trim(), 10);
+        return Number.isFinite(port) && port > 0 ? port : null;
+    } catch { return null; }
+}
+
+/** 读取 api-token 文件（主程序 Bearer token） */
+function readApiToken(): string {
+    try {
+        const file = nodePath.join(getMainAppDataDir(), 'api-token');
+        if (!nodeFs.existsSync(file)) return '';
+        const token = nodeFs.readFileSync(file, 'utf8').trim();
+        return token.length >= 16 ? token : '';
+    } catch { return ''; }
+}
+
+/**
+ * ★ 异步通过 HTTP /api/main-config 拉取主程序配置（最可靠路径）。
+ * 主程序在运行时即可返回；主程序未运行返回 null（调用方回退到同步文件/leveldb）。
+ * 需要传入 obsidian requestUrl（避免此模块直接依赖 obsidian 类型）。
+ */
+export async function fetchMainAppConfig(requestUrlFn: typeof import('obsidian').requestUrl): Promise<MainAppConfig | null> {
+    const port = readApiPort();
+    if (!port) return null;
+    const token = readApiToken();
+    try {
+        const res = await requestUrlFn({
+            url: `http://127.0.0.1:${port}/api/main-config`,
+            method: 'GET',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            throw: false,
+        });
+        const json = res.json as { ok?: boolean; config?: MainAppConfig | null };
+        if (json?.ok && json.config && (json.config.execution || json.config.apiProfiles || json.config.savedSessions)) {
+            return json.config;
+        }
+        return null;
+    } catch { return null; }
+}
+
+/** 异步读取主程序默认 execution 配置（HTTP 优先，回退同步文件/leveldb） */
+export async function fetchMainExecution(requestUrlFn: typeof import('obsidian').requestUrl): Promise<MainAppExecution | null> {
+    const cfg = await fetchMainAppConfig(requestUrlFn);
+    if (cfg?.execution) return cfg.execution;
+    return readMainExecution();
+}
+
+/** 异步读取主程序已保存的 API profiles（HTTP 优先，回退同步文件/leveldb） */
+export async function fetchMainApiProfiles(requestUrlFn: typeof import('obsidian').requestUrl): Promise<MainApiProfile[]> {
+    const cfg = await fetchMainAppConfig(requestUrlFn);
+    const profiles = cfg?.apiProfiles || readMainAppConfig()?.apiProfiles || [];
+    return [...profiles].sort((a, b) => b.lastUsed - a.lastUsed);
 }

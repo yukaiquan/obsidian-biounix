@@ -132,13 +132,29 @@ export class InteractionModal extends Modal {
 
     private renderSelectOption(el: HTMLElement, params: any): void {
         const title = params?.title || params?.prompt || '请选择';
-        const options: string[] = Array.isArray(params?.options) ? params.options : [];
         const multiple = params?.multiple === true;
         const allowCustom = params?.allow_custom_input === true;
+        const defaultValue = params?.default_value || params?.default || '';
+
+        // ★ 归一化 options：兼容 string[] 和 {label,value,description}[] 两种格式
+        // 主程序传的是对象数组，旧代码按 string[] 处理导致显示 [object Object]
+        type NormOpt = { label: string; value: string; description?: string };
+        const rawOptions: unknown[] = Array.isArray(params?.options) ? params.options : [];
+        const options: NormOpt[] = rawOptions.map((o) => {
+            if (typeof o === 'string') return { label: o, value: o };
+            if (o && typeof o === 'object') {
+                const obj = o as Record<string, unknown>;
+                const label = String(obj.label ?? obj.name ?? obj.value ?? '');
+                const value = String(obj.value ?? obj.id ?? obj.label ?? obj.name ?? '');
+                const description = obj.description != null ? String(obj.description) : undefined;
+                return { label, value, description };
+            }
+            return { label: String(o ?? ''), value: String(o ?? '') };
+        }).filter(o => o.value);
 
         el.createEl('h3', { text: title });
-        if (params?.description) {
-            el.createDiv({ cls: 'biounix-interaction-message' }).setText(params.description);
+        if (params?.description || params?.message) {
+            el.createDiv({ cls: 'biounix-interaction-message' }).setText(params?.description || params?.message);
         }
 
         const selected = new Set<string>();
@@ -148,8 +164,13 @@ export class InteractionModal extends Modal {
         for (const opt of options) {
             const row = listEl.createDiv({ cls: 'biounix-interaction-option' });
             const input = row.createEl('input', {
-                attr: { type: multiple ? 'checkbox' : 'radio', name: 'biounix-opt', value: opt },
+                attr: { type: multiple ? 'checkbox' : 'radio', name: 'biounix-opt', value: opt.value },
             });
+            // 预选默认值
+            if (defaultValue && opt.value === defaultValue) {
+                input.checked = true;
+                selected.add(opt.value);
+            }
             optionEls.push(input);
             input.addEventListener('change', () => {
                 if (!multiple) {
@@ -158,12 +179,16 @@ export class InteractionModal extends Modal {
                     for (const e of optionEls) if (e !== input) e.checked = false;
                 }
                 if (input.checked) {
-                    selected.add(opt);
+                    selected.add(opt.value);
                 } else {
-                    selected.delete(opt);
+                    selected.delete(opt.value);
                 }
             });
-            row.createEl('label', { text: opt });
+            const labelEl = row.createEl('label', { cls: 'biounix-interaction-option-label' });
+            labelEl.createEl('span', { cls: 'biounix-interaction-option-name', text: opt.label });
+            if (opt.description) {
+                labelEl.createEl('div', { cls: 'biounix-interaction-option-desc', text: opt.description });
+            }
         }
 
         // 自定义输入

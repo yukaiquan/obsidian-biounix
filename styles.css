@@ -2623,6 +2623,21 @@ body {
   cursor: pointer;
   flex: 1;
 }
+.biounix-interaction-option-label {
+  cursor: pointer;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.biounix-interaction-option-name {
+  font-size: 0.95em;
+}
+.biounix-interaction-option-desc {
+  font-size: 0.8em;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
 .biounix-interaction-custom {
   margin: 8px 0 12px;
   display: flex;

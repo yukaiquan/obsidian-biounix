@@ -15,7 +15,7 @@ import { registerFileMenu } from './file-menu';
 import { BioUnixChatView, BIOUNIX_CHAT_VIEW_TYPE } from './sidebar';
 import { scanVault, generateReportMarkdown, type VaultReport } from './vault-tools';
 import { BioUnixVaultReportView, BIOUNIX_VAULT_VIEW_TYPE } from './vault-report';
-import { readMainExecution } from './config-reader';
+import { readMainExecution, fetchMainExecution } from './config-reader';
 import { NoteServer } from './note-server';
 
 export default class BioUnixPlugin extends Plugin {
@@ -188,8 +188,10 @@ export default class BioUnixPlugin extends Plugin {
   async loadSettings(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     // ★ 用主程序已配置的 LLM 设置回填插件默认值（插件自身未配置时生效）
-    // 这样设置页、快捷入口（发送文件/执行代码块）都能复用主程序配置
-    const mainExec = readMainExecution();
+    // 优先走 HTTP /api/main-config（最可靠，主程序运行时即返回最新配置），
+    // 回退到同步文件/leveldb 读取（主程序未运行时）
+    let mainExec = await fetchMainExecution(requestUrl).catch(() => null);
+    if (!mainExec) mainExec = readMainExecution();
     if (mainExec) {
       if (!this.settings.apiKey && mainExec.apiKey) this.settings.apiKey = mainExec.apiKey;
       if (mainExec.llmProvider) this.settings.llmProvider = mainExec.llmProvider;
