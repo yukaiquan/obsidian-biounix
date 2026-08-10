@@ -1,5 +1,33 @@
 /* BioUnix Obsidian Plugin 样式 */
 
+/* ============ 设计 Token（统一圆角/间距/字体/状态色） ============ */
+/* 所有序式组件引用这些变量，确保视觉一致性；暗色模式在文件末尾覆盖 */
+body {
+  --biounix-radius-sm: 4px;
+  --biounix-radius-md: 6px;
+  --biounix-radius-lg: 8px;
+  --biounix-radius-pill: 10px;
+  --biounix-gap-xs: 4px;
+  --biounix-gap-sm: 6px;
+  --biounix-gap-md: 8px;
+  --biounix-gap-lg: 12px;
+  --biounix-font-xs: 0.7em;
+  --biounix-font-sm: 0.78em;
+  --biounix-font-md: 0.85em;
+  --biounix-font-lg: 0.9em;
+  /* 状态色：优先用 Obsidian 主题变量，回退硬编码（确保暗色可读） */
+  --biounix-color-success: var(--text-success, #4caf50);
+  --biounix-color-error: var(--text-error, #f44336);
+  --biounix-color-warning: var(--text-warning, #ff9800);
+  --biounix-color-info: var(--interactive-accent);
+  --biounix-color-success-bg: rgba(76, 175, 80, 0.12);
+  --biounix-color-error-bg: rgba(244, 67, 54, 0.12);
+  --biounix-color-warning-bg: rgba(255, 152, 0, 0.12);
+  --biounix-color-info-bg: rgba(33, 150, 243, 0.12);
+  --biounix-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --biounix-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
 /* ============ Session 选择器 ============ */
 
 .biounix-session-picker {
@@ -581,7 +609,7 @@
 .biounix-chat-icon-btn {
   padding: 4px 6px;
   border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
+  border-radius: var(--biounix-radius-sm);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -602,16 +630,61 @@
 .biounix-chat-new-btn {
   padding: 4px 10px;
   border: 1px solid var(--interactive-accent);
-  border-radius: 6px;
+  border-radius: var(--biounix-radius-sm);
   background: var(--interactive-accent);
   color: var(--text-on-accent);
   cursor: pointer;
-  font-size: 0.82em;
+  font-size: var(--biounix-font-sm);
   font-weight: 500;
 }
 
 .biounix-chat-new-btn:hover {
   opacity: 0.88;
+}
+
+/* 更多功能溢出菜单（header 次要按钮收纳） */
+.biounix-more-menu {
+  position: absolute;
+  top: 100%;
+  right: 8px;
+  margin-top: 4px;
+  min-width: 160px;
+  padding: 4px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--biounix-radius-md);
+  box-shadow: var(--biounix-shadow-md);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.biounix-more-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: var(--biounix-radius-sm);
+  background: transparent;
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: var(--biounix-font-md);
+  text-align: left;
+  width: 100%;
+}
+.biounix-more-item:hover {
+  background: var(--background-modifier-hover);
+}
+.biounix-more-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.biounix-more-item-icon svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
 }
 
 .biounix-chat-status {
@@ -793,28 +866,6 @@
   opacity: 0.5;
 }
 
-.biounix-chat-copy-btn {
-  padding: 2px 4px;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.biounix-chat-bubble:hover .biounix-chat-copy-btn {
-  opacity: 0.7;
-}
-
-.biounix-chat-copy-btn:hover {
-  opacity: 1 !important;
-  background: var(--background-modifier-hover);
-}
-
 .biounix-chat-input-area {
   display: flex;
   flex-direction: column;
@@ -905,7 +956,7 @@
 
 /* 停止生成态 */
 .biounix-chat-send-btn.is-stop {
-  background: var(--text-error, #e05252);
+  background: var(--biounix-color-error);
 }
 
 .biounix-chat-send-btn.is-stop:hover {
@@ -1334,8 +1385,8 @@
 }
 
 .biounix-tool-card-btn.is-undo {
-  color: var(--text-warning, #d68a3c);
-  border-color: var(--text-warning, #d68a3c);
+  color: var(--biounix-color-warning);
+  border-color: var(--biounix-color-warning);
 }
 
 .biounix-tool-card-btn.is-undo:hover {
@@ -1609,18 +1660,18 @@
   font-family: var(--font-monospace);
 }
 .biounix-diff-add-count {
-  color: #4caf50;
+  color: var(--biounix-color-success);
   font-weight: 600;
 }
 .biounix-diff-del-count {
-  color: #f44336;
+  color: var(--biounix-color-error);
   font-weight: 600;
 }
 .biounix-line-diff {
   font-family: var(--font-monospace);
   font-size: var(--font-ui-smaller);
   background: var(--background-modifier-border);
-  border-radius: 4px;
+  border-radius: var(--biounix-radius-sm);
   padding: 4px 0;
   max-height: 240px;
   overflow-y: auto;
@@ -1646,22 +1697,22 @@
   color: var(--text-muted);
 }
 .biounix-diff-add {
-  background: rgba(76, 175, 80, 0.12);
+  background: var(--biounix-color-success-bg);
 }
 .biounix-diff-add .biounix-diff-prefix {
-  color: #4caf50;
+  color: var(--biounix-color-success);
 }
 .biounix-diff-add .biounix-diff-text {
-  color: #4caf50;
+  color: var(--biounix-color-success);
 }
 .biounix-diff-del {
-  background: rgba(244, 67, 54, 0.12);
+  background: var(--biounix-color-error-bg);
 }
 .biounix-diff-del .biounix-diff-prefix {
-  color: #f44336;
+  color: var(--biounix-color-error);
 }
 .biounix-diff-del .biounix-diff-text {
-  color: #f44336;
+  color: var(--biounix-color-error);
 }
 
 /* ===== F1 会话管理面板 ===== */
@@ -1763,8 +1814,8 @@
   opacity: 1;
 }
 .biounix-session-item-del:hover {
-  background: rgba(244, 67, 54, 0.15);
-  color: #f44336;
+  background: var(--biounix-color-error-bg);
+  color: var(--biounix-color-error);
 }
 
 /* ===== F2 消息搜索 ===== */
@@ -1812,9 +1863,9 @@
   color: var(--text-normal);
 }
 .biounix-search-hit {
-  background: rgba(255, 213, 79, 0.5);
+  background: var(--text-highlight-bg);
   color: inherit;
-  border-radius: 2px;
+  border-radius: var(--biounix-radius-xs);
   padding: 0 1px;
 }
 .biounix-chat-bubble.is-search-current {
@@ -1865,7 +1916,7 @@
   align-items: center;
 }
 .biounix-mounted-note-rm:hover {
-  color: #f44336;
+  color: var(--biounix-color-error);
 }
 .biounix-mount-search {
   width: 100%;
@@ -1923,10 +1974,10 @@
   font-size: 0.85em;
 }
 .biounix-timeline-stat-ok {
-  color: #4caf50;
+  color: var(--biounix-color-success);
 }
 .biounix-timeline-stat-err {
-  color: #f44336;
+  color: var(--biounix-color-error);
 }
 .biounix-timeline-stat-run {
   color: var(--interactive-accent);
@@ -1985,13 +2036,13 @@
   transition: width 0.3s ease;
 }
 .biounix-timeline-done .biounix-timeline-bar {
-  background: rgba(76, 175, 80, 0.3);
+  background: var(--biounix-color-success-bg);
 }
 .biounix-timeline-error .biounix-timeline-bar {
-  background: rgba(244, 67, 54, 0.3);
+  background: var(--biounix-color-error-bg);
 }
 .biounix-timeline-running .biounix-timeline-bar {
-  background: rgba(33, 150, 243, 0.3);
+  background: var(--biounix-color-info-bg);
   animation: biounix-pulse 1.5s infinite;
 }
 .biounix-timeline-cancelled .biounix-timeline-bar {
@@ -2200,12 +2251,12 @@
   font-size: 0.85em;
 }
 .biounix-slurm-up {
-  background: rgba(76, 175, 80, 0.15);
-  color: var(--text-success, #4caf50);
+  background: var(--biounix-color-success-bg);
+  color: var(--biounix-color-success);
 }
 .biounix-slurm-down {
-  background: rgba(244, 67, 54, 0.15);
-  color: var(--text-error, #f44336);
+  background: var(--biounix-color-error-bg);
+  color: var(--biounix-color-error);
 }
 .biounix-resources-partition-nodes,
 .biounix-resources-partition-time,
@@ -2224,22 +2275,22 @@
   flex-wrap: wrap;
 }
 .biounix-node-idle {
-  border-left: 3px solid var(--text-success, #4caf50);
+  border-left: 3px solid var(--biounix-color-success);
 }
 .biounix-node-mix,
 .biounix-node-alloc {
-  border-left: 3px solid var(--color-yellow, #ffc107);
+  border-left: 3px solid var(--biounix-color-warning);
 }
 .biounix-node-down,
 .biounix-node-fail,
 .biounix-node-failing {
-  border-left: 3px solid var(--text-error, #f44336);
+  border-left: 3px solid var(--biounix-color-error);
 }
 .biounix-node-drain,
 .biounix-node-draining,
 .biounix-node-reserved,
 .biounix-node-maint {
-  border-left: 3px solid var(--color-orange, #ff9800);
+  border-left: 3px solid var(--biounix-color-warning);
 }
 .biounix-node-unknown,
 .biounix-node-future {
@@ -2301,15 +2352,15 @@
   font-size: 0.9em;
 }
 .biounix-resources-job-reason {
-  color: var(--color-orange, #ff9800);
-  font-size: 0.85em;
+  color: var(--biounix-color-warning);
+  font-size: var(--biounix-font-sm);
 }
 .biounix-resources-error {
   padding: 6px 10px;
-  background: rgba(244, 67, 54, 0.1);
-  border-radius: 4px;
-  font-size: 0.8em;
-  color: var(--text-error, #f44336);
+  background: var(--biounix-color-error-bg);
+  border-radius: var(--biounix-radius-sm);
+  font-size: var(--biounix-font-md);
+  color: var(--biounix-color-error);
 }
 .biounix-resources-empty {
   padding: 8px;
@@ -2487,28 +2538,30 @@
 }
 .biounix-risk-badge {
   padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.75em;
+  border-radius: var(--biounix-radius-sm);
+  font-size: var(--biounix-font-sm);
   font-weight: 600;
-  color: #fff;
+  color: var(--text-on-accent);
 }
 .biounix-risk-safe {
-  background: #4caf50;
+  background: var(--biounix-color-success);
 }
 .biounix-risk-low {
-  background: #8bc34a;
+  background: var(--biounix-color-success);
+  opacity: 0.85;
 }
 .biounix-risk-medium {
-  background: #ff9800;
+  background: var(--biounix-color-warning);
 }
 .biounix-risk-high {
-  background: #f44336;
+  background: var(--biounix-color-error);
 }
 .biounix-risk-critical {
-  background: #b71c1c;
+  background: var(--biounix-color-error);
+  filter: brightness(0.85);
 }
 .biounix-risk-blocked {
-  background: #616161;
+  background: var(--text-muted);
 }
 
 .biounix-interaction-message {
@@ -2537,10 +2590,10 @@
 .biounix-interaction-warning {
   margin: 8px 0 12px;
   padding: 6px 12px;
-  background: rgba(244, 67, 54, 0.1);
-  border-left: 3px solid #f44336;
-  color: #f44336;
-  font-size: 0.9em;
+  background: var(--biounix-color-error-bg);
+  border-left: 3px solid var(--biounix-color-error);
+  color: var(--biounix-color-error);
+  font-size: var(--biounix-font-lg);
 }
 .biounix-interaction-remember {
   margin: 8px 0 12px;
@@ -2624,11 +2677,12 @@
   background: var(--interactive-accent-hover);
 }
 .biounix-btn-danger {
-  background: #f44336;
-  color: #fff;
+  background: var(--biounix-color-error);
+  color: var(--text-on-accent);
 }
 .biounix-btn-danger:hover {
-  background: #d32f2f;
+  background: var(--biounix-color-error);
+  filter: brightness(0.88);
 }
 .biounix-btn-secondary {
   background: var(--background-modifier-border);
@@ -2636,4 +2690,133 @@
 }
 .biounix-btn-secondary:hover {
   background: var(--background-modifier-border-hover);
+}
+
+/* ============ 暗色模式覆盖 ============ */
+/* Obsidian 暗色主题下，部分半透明背景在深底上对比度不足，此处加深/调亮以保持可读 */
+body.theme-dark {
+  --biounix-color-success-bg: rgba(76, 175, 80, 0.18);
+  --biounix-color-error-bg: rgba(244, 67, 54, 0.2);
+  --biounix-color-warning-bg: rgba(255, 152, 0, 0.18);
+  --biounix-color-info-bg: rgba(33, 150, 243, 0.18);
+  --biounix-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.32);
+  --biounix-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+body.theme-dark .biounix-chat-bubble.is-user {
+  background: var(--background-modifier-hover);
+}
+body.theme-dark .biounix-tool-card {
+  background: var(--background-secondary-alt, var(--background-secondary));
+}
+body.theme-dark .biounix-code-block {
+  background: var(--background-primary-alt, var(--background-secondary));
+  border-color: var(--background-modifier-border);
+}
+
+/* ============ 移动端响应式 ============ */
+/* 窄屏（手机/平板竖屏）下：压缩 header、消息气泡占满宽度、输入区全宽 */
+@media (max-width: 600px) {
+  .biounix-chat-view {
+    padding: 0;
+  }
+  .biounix-chat-header {
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 4px 6px;
+  }
+  /* header 按钮：窄屏只显示图标，靠 aria-label 辅助 */
+  .biounix-chat-icon-btn {
+    width: 32px;
+    height: 32px;
+  }
+  .biounix-chat-icon-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+  .biounix-chat-messages {
+    padding: 6px 4px;
+  }
+  .biounix-chat-bubble {
+    max-width: 100%;
+    border-radius: var(--biounix-radius-md);
+  }
+  .biounix-chat-bubble.is-user {
+    margin-left: 0;
+  }
+  .biounix-chat-bubble.is-assistant {
+    margin-right: 0;
+  }
+  .biounix-chat-input-area {
+    padding: 6px;
+  }
+  .biounix-chat-textarea {
+    font-size: 16px; /* 防 iOS 缩放 */
+    min-height: 48px;
+  }
+  .biounix-chat-tool-bar {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .biounix-chat-tool-btn {
+    padding: 4px 8px;
+    font-size: var(--biounix-font-sm);
+  }
+  .biounix-mounted-notes {
+    flex-wrap: wrap;
+  }
+  /* 模态框窄屏适配 */
+  .biounix-interaction-modal .modal-content,
+  .biounix-create-session-modal .modal-content {
+    max-width: 95vw;
+    margin: 8px;
+  }
+  .biounix-resources-grid {
+    grid-template-columns: 1fr;
+  }
+  /* 搜索栏窄屏 */
+  .biounix-search-bar {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .biounix-search-input {
+    min-width: 120px;
+  }
+}
+
+/* 中等屏（平板横屏/小桌面窗口）：微调 */
+@media (min-width: 601px) and (max-width: 900px) {
+  .biounix-chat-bubble {
+    max-width: 90%;
+  }
+  .biounix-resources-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ============ 无障碍：focus 可见态 ============ */
+/* 键盘 Tab 导航时统一聚焦轮廓，提升可访问性 */
+.biounix-chat-icon-btn:focus-visible,
+.biounix-chat-tool-btn:focus-visible,
+.biounix-chat-action-btn:focus-visible,
+.biounix-chat-send-btn:focus-visible,
+.biounix-code-copy:focus-visible,
+.biounix-search-nav-btn:focus-visible,
+.biounix-btn-primary:focus-visible,
+.biounix-btn-danger:focus-visible,
+.biounix-btn-secondary:focus-visible,
+.biounix-tool-card-btn:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* 减少动效偏好：尊重 prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .biounix-chat-bubble,
+  .biounix-chat-send-btn,
+  .biounix-tool-card-btn,
+  .biounix-chat-icon-btn,
+  .biounix-chat-tool-btn,
+  .biounix-chat-action-btn {
+    transition: none;
+  }
 }

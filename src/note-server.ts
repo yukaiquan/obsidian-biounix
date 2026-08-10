@@ -130,24 +130,45 @@ export class NoteServer {
                     return;
                 }
 
-                // 搜索笔记
+                // 搜索笔记（优化：文件名/basename 命中无需读盘；内容搜索并发读取）
                 if (path === '/notes/search') {
                     const query = q('q');
                     const limit = parseInt(q('limit') || '50', 10);
                     if (!query) { this.sendJson(res, 400, { error: 'missing q' }); return; }
                     const files = vault.getMarkdownFiles();
+                    const queryLower = query.toLowerCase();
                     const matches: Array<{ path: string; snippet: string }> = [];
+
+                    // 第一轮：文件名/basename 命中（无需读盘，走 metadataCache 已缓存的名称）
                     for (const f of files) {
                         if (matches.length >= limit) break;
-                        try {
-                            const content = await adapter.read(f.path);
-                            const idx = content.toLowerCase().indexOf(query.toLowerCase());
-                            if (idx >= 0) {
-                                const start = Math.max(0, idx - 40);
-                                const snippet = content.slice(start, idx + query.length + 60);
-                                matches.push({ path: f.path, snippet });
+                        if (f.path.toLowerCase().includes(queryLower) || f.basename.toLowerCase().includes(queryLower)) {
+                            matches.push({ path: f.path, snippet: `(filename match) ${f.basename}` });
+                        }
+                    }
+
+                    // 第二轮：内容搜索（仅当文件名命中不足 limit 时，并发读取剩余文件）
+                    if (matches.length < limit) {
+                        const remaining = files.filter((f) => !matches.some((m) => m.path === f.path));
+                        // 并发读取（分批，避免超大 vault 一次性打开发太多 fd）
+                        const BATCH = 20;
+                        for (let i = 0; i < remaining.length && matches.length < limit; i += BATCH) {
+                            const batch = remaining.slice(i, Math.min(i + BATCH, remaining.length));
+                            const results = await Promise.allSettled(batch.map(async (f) => {
+                                const content = await adapter.read(f.path);
+                                const idx = content.toLowerCase().indexOf(queryLower);
+                                if (idx >= 0) {
+                                    const start = Math.max(0, idx - 40);
+                                    const snippet = content.slice(start, idx + query.length + 60);
+                                    return { path: f.path, snippet };
+                                }
+                                return null;
+                            }));
+                            for (const r of results) {
+                                if (matches.length >= limit) break;
+                                if (r.status === 'fulfilled' && r.value) matches.push(r.value);
                             }
-                        } catch { /* ignore binary/unreadable */ }
+                        }
                     }
                     this.sendJson(res, 200, { query, count: matches.length, matches });
                     return;

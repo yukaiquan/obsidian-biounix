@@ -90,6 +90,8 @@ export class BioUnixChatView extends ItemView {
   private streamingReasonEl: HTMLElement | null = null;
   /** 流式时最后一条 assistant 的 markdown 渲染容器（流式结束后才做 MarkdownRenderer） */
   private streamingMdEl: HTMLElement | null = null;
+  /** 流式正文文本节点（增量 setText 用，避免每帧重建光标 span） */
+  private streamingTextEl: Text | null = null;
   /** 全量渲染后每条消息 bubble 的 DOM 引用（增量更新/搜索定位用） */
   private bubbleEls: HTMLElement[] = [];
 
@@ -119,8 +121,8 @@ export class BioUnixChatView extends ItemView {
     headerLeft.createEl('span', { text: 'BioUnix', cls: 'biounix-chat-title' });
 
     const headerRight = header.createDiv({ cls: 'biounix-chat-header-right' });
-    // 清空对话按钮
-    const clearBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: '清空对话' } });
+    // 核心按钮：清空对话
+    const clearBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: '清空对话', 'aria-label': '清空对话' } });
     setIcon(clearBtn, 'trash');
     clearBtn.onclick = async () => {
       if (this.messages.length === 0) return;
@@ -134,32 +136,52 @@ export class BioUnixChatView extends ItemView {
         new Notice(`清空失败: ${(e as Error).message}`);
       }
     };
-    // Obsidian 笔记浏览器按钮
-    const noteBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: '预览 Obsidian 笔记' } });
+    // 核心按钮：Obsidian 笔记浏览器
+    const noteBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: '预览 Obsidian 笔记', 'aria-label': '预览 Obsidian 笔记' } });
     setIcon(noteBtn, 'file-text');
     noteBtn.onclick = () => this.openNoteBrowser();
-    // 会话列表按钮
-    const listBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: '会话列表' } });
+    // 核心按钮：会话列表
+    const listBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: '会话列表', 'aria-label': '会话列表' } });
     setIcon(listBtn, 'list');
     listBtn.onclick = () => this.toggleSessionPanel();
-    // 搜索按钮
-    const searchBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: '搜索消息' } });
+    // 核心按钮：搜索
+    const searchBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: '搜索消息', 'aria-label': '搜索消息' } });
     setIcon(searchBtn, 'search');
     searchBtn.onclick = () => this.toggleSearch();
-    // 时间线按钮
-    const timelineBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: 'Agent 执行时间线' } });
-    setIcon(timelineBtn, 'activity');
-    timelineBtn.onclick = () => this.showTimeline();
-    // 计算资源按钮
-    const resBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: '查看可调用计算资源' } });
-    setIcon(resBtn, 'server');
-    resBtn.onclick = () => this.showResources();
-    // 会话配置按钮
-    const cfgBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: '查看会话配置' } });
-    setIcon(cfgBtn, 'settings');
-    cfgBtn.onclick = () => this.showConfig();
+    // 次要按钮收纳：更多菜单（时间线/计算资源/会话配置）
+    const moreBtn = headerRight.createEl('button', { cls: 'biounix-chat-icon-btn', attr: { title: '更多功能', 'aria-label': '更多功能', 'aria-haspopup': 'menu', 'aria-expanded': 'false' } });
+    setIcon(moreBtn, 'more-horizontal');
+    let moreMenu: HTMLElement | null = null;
+    const closeMoreMenu = () => {
+      if (moreMenu) { moreMenu.remove(); moreMenu = null; moreBtn.setAttribute('aria-expanded', 'false'); }
+    };
+    moreBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (moreMenu) { closeMoreMenu(); return; }
+      moreMenu = headerRight.createDiv({ cls: 'biounix-more-menu', attr: { role: 'menu' } });
+      moreBtn.setAttribute('aria-expanded', 'true');
+      const mkItem = (icon: string, label: string, action: () => void): HTMLElement => {
+        const item = moreMenu!.createEl('button', { cls: 'biounix-more-item', attr: { role: 'menuitem', 'aria-label': label } });
+        const ic = item.createEl('span', { cls: 'biounix-more-item-icon' });
+        setIcon(ic, icon);
+        item.createEl('span', { text: label });
+        item.onclick = () => { closeMoreMenu(); action(); };
+        return item;
+      };
+      mkItem('activity', 'Agent 执行时间线', () => this.showTimeline());
+      mkItem('server', '计算资源', () => this.showResources());
+      mkItem('settings', '会话配置', () => this.showConfig());
+      // 点击菜单外关闭
+      setTimeout(() => {
+        const onDocClick = (ev: MouseEvent) => {
+          if (moreMenu && !moreMenu.contains(ev.target as Node) && ev.target !== moreBtn) closeMoreMenu();
+          if (!moreMenu) document.removeEventListener('click', onDocClick);
+        };
+        document.addEventListener('click', onDocClick);
+      }, 0);
+    };
     // 新建会话按钮
-    const sessionBtn = headerRight.createEl('button', { text: '＋ 新建', cls: 'biounix-chat-new-btn' });
+    const sessionBtn = headerRight.createEl('button', { text: '＋ 新建', cls: 'biounix-chat-new-btn', attr: { 'aria-label': '新建会话' } });
     sessionBtn.onclick = () => this.openCreateSessionModal();
 
     // 状态栏（显示当前会话信息）
@@ -623,10 +645,9 @@ export class BioUnixChatView extends ItemView {
     const last = this.messages[this.messages.length - 1];
     if (!last || last.role !== 'assistant') return;
     // 正文：纯文本（流式期间不做 Markdown 渲染，避免卡顿）
-    if (this.streamingMdEl) {
-      this.streamingMdEl.setText(last.content);
-      const cursor = this.streamingMdEl.createEl('span', { cls: 'biounix-streaming-cursor' });
-      cursor.setText('▋');
+    // 仅更新文本节点内容，保留光标 span，避免每帧重建 DOM
+    if (this.streamingMdEl && this.streamingTextEl) {
+      this.streamingTextEl.textContent = last.content;
     }
     // 思维链：纯文本追加
     if (this.streamingReasonEl && last.reasoning) {
@@ -743,6 +764,7 @@ export class BioUnixChatView extends ItemView {
     this.streamingContentEl = null;
     this.streamingReasonEl = null;
     this.streamingMdEl = null;
+    this.streamingTextEl = null;
 
     if (this.messages.length === 0 && !this.streaming) {
       const empty = this.messageEl.createDiv({ cls: 'biounix-chat-empty' });
@@ -808,12 +830,14 @@ export class BioUnixChatView extends ItemView {
         // 正文：流式时用纯文本 + 闪烁光标（避免每个 chunk 都调 MarkdownRenderer），结束后再 Markdown 渲染
         if (isStreamingLast) {
           const mdEl = contentEl.createDiv({ cls: 'biounix-chat-streaming-text' });
-          mdEl.setText(msg.content);
-          // 光标
+          // 文本节点 + 光标 span 分离，增量更新只改文本节点，光标 span 常驻
+          const textNode = document.createTextNode(msg.content);
+          mdEl.appendChild(textNode);
           const cursor = mdEl.createEl('span', { cls: 'biounix-streaming-cursor' });
           cursor.setText('▋');
           this.streamingContentEl = contentEl;
           this.streamingMdEl = mdEl;
+          this.streamingTextEl = textNode;
         } else if (this.mdComponent) {
           void MarkdownRenderer.renderMarkdown(msg.content, contentEl, '', this.mdComponent).then(() => {
             this.enhanceCodeBlocks(contentEl);
@@ -841,14 +865,14 @@ export class BioUnixChatView extends ItemView {
       const time = new Date(msg.timestamp).toLocaleTimeString('zh-CN', { hour12: false });
       footerRow.createEl('span', { text: time, cls: 'biounix-chat-time' });
       // 复制
-      const copyBtn = footerRow.createEl('button', { cls: 'biounix-chat-action-btn', attr: { title: '复制' } });
+      const copyBtn = footerRow.createEl('button', { cls: 'biounix-chat-action-btn', attr: { title: '复制', 'aria-label': '复制消息' } });
       setIcon(copyBtn, 'copy');
       copyBtn.onclick = (e) => {
         e.stopPropagation();
         void navigator.clipboard.writeText(msg.content).then(() => new Notice('已复制'));
       };
       // 引用（插入到输入框）
-      const quoteBtn = footerRow.createEl('button', { cls: 'biounix-chat-action-btn', attr: { title: '引用到输入框' } });
+      const quoteBtn = footerRow.createEl('button', { cls: 'biounix-chat-action-btn', attr: { title: '引用到输入框', 'aria-label': '引用消息到输入框' } });
       setIcon(quoteBtn, 'quote');
       quoteBtn.onclick = (e) => {
         e.stopPropagation();
@@ -864,14 +888,14 @@ export class BioUnixChatView extends ItemView {
       };
       // 编辑（仅 user 消息）+ 重新生成（仅 assistant 消息）+ 分支（所有消息）
       if (msg.role === 'user') {
-        const editBtn = footerRow.createEl('button', { cls: 'biounix-chat-action-btn', attr: { title: '编辑并重发' } });
+        const editBtn = footerRow.createEl('button', { cls: 'biounix-chat-action-btn', attr: { title: '编辑并重发', 'aria-label': '编辑并重发' } });
         setIcon(editBtn, 'pencil');
         editBtn.onclick = (e) => {
           e.stopPropagation();
           this.editMessage(idx);
         };
       } else if (msg.role === 'assistant') {
-        const regenBtn = footerRow.createEl('button', { cls: 'biounix-chat-action-btn', attr: { title: '重新生成' } });
+        const regenBtn = footerRow.createEl('button', { cls: 'biounix-chat-action-btn', attr: { title: '重新生成', 'aria-label': '重新生成回复' } });
         setIcon(regenBtn, 'rotate-cw');
         regenBtn.onclick = (e) => {
           e.stopPropagation();
@@ -879,7 +903,7 @@ export class BioUnixChatView extends ItemView {
         };
       }
       // 分支对话：从此处分叉
-      const forkBtn = footerRow.createEl('button', { cls: 'biounix-chat-action-btn', attr: { title: '从此处分叉新会话' } });
+      const forkBtn = footerRow.createEl('button', { cls: 'biounix-chat-action-btn', attr: { title: '从此处分叉新会话', 'aria-label': '从此处分叉新会话' } });
       setIcon(forkBtn, 'git-branch');
       forkBtn.onclick = (e) => {
         e.stopPropagation();
@@ -1464,8 +1488,18 @@ export class BioUnixChatView extends ItemView {
       try { resultText = JSON.stringify(JSON.parse(tc.result), null, 2); } catch { /* */ }
       detailEl.createEl('pre', { cls: 'biounix-tool-card-pre', text: resultText });
     }
-    head.onclick = () => {
-      detailEl.style.display = detailEl.style.display === 'none' ? 'block' : 'none';
+    head.setAttribute('role', 'button');
+    head.setAttribute('tabindex', '0');
+    head.setAttribute('aria-expanded', 'false');
+    head.setAttribute('aria-label', `工具 ${tc.toolName} 详情`);
+    const toggleDetail = () => {
+      const open = detailEl.style.display === 'none';
+      detailEl.style.display = open ? 'block' : 'none';
+      head.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+    head.onclick = toggleDetail;
+    head.onkeydown = (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggleDetail(); }
     };
   }
 
@@ -1660,28 +1694,22 @@ export class BioUnixChatView extends ItemView {
    *    无法 cat 本地路径，因此直接注入笔记全文内容（而非传路径让 agent 自行读取）。
    *    本地会话也统一注入内容，省去 agent 多一次 cat 调用。 */
   private async buildContextPrefix(): Promise<string> {
-    // ★ 当前活动笔记：读取最新内容（用户可能在发送前编辑过）
+    // ★ 当前活动笔记：仅记录路径（内容由 agent 按需用 obsidian_read 读取，避免每次发送都带全文）
     const af = this.app.workspace.getActiveFile();
     const hasCurrent = af && af.extension === 'md';
     const hasMounted = this.mountedNotes.length > 0;
     // 无任何笔记上下文时不注入，直接返回原文（避免每次闲聊都带系统提示）
     if (!hasCurrent && !hasMounted) return '';
-    // 单篇笔记内容截断上限（防止超大笔记撑爆上下文）
-    const MAX_NOTE_CHARS = 12000;
-    const truncate = (s: string): string => s.length > MAX_NOTE_CHARS ? s.slice(0, MAX_NOTE_CHARS) + '\n...（已截断，共 ' + s.length + ' 字符）' : s;
     const sections: string[] = [];
-    // ★ 来源标识：告知 agent 运行环境为 Obsidian 插件，笔记内容已直接提供
-    sections.push(`【运行环境】\n你正在 Obsidian 笔记软件的 BioUnix 插件中与用户对话。下方"当前笔记"和"挂载笔记"的内容已直接提供，无需再用 run_command 读取。`);
+    // ★ 来源标识：告知 agent 运行环境为 Obsidian 插件，笔记内容需用 obsidian_read 读取
+    sections.push(`【运行环境】\n你正在 Obsidian 笔记软件的 BioUnix 插件中与用户对话。下方"当前笔记"和"挂载笔记"仅提供路径，需要内容时请用 obsidian_read 工具按路径读取（不要用 run_command 读本地文件）。`);
     if (hasCurrent) {
-      try {
-        const content = await this.app.vault.read(af!);
-        sections.push(`【当前笔记】 ${af!.path}\n${truncate(content)}`);
-      } catch { /* 读取失败则跳过 */ }
+      sections.push(`【当前笔记】 ${af!.path}`);
     }
-    // 已挂载笔记：直接注入内容（挂载时已 vault.read 读取，这里用缓存的 content）
+    // 挂载笔记：仅注入路径列表（用户挂载表示"这些笔记与当前任务相关"，agent 按需读取）
     if (hasMounted) {
-      const blocks = this.mountedNotes.map(n => `### ${n.path}\n${truncate(n.content)}`);
-      sections.push(`【挂载笔记】\n${blocks.join('\n\n')}`);
+      const paths = this.mountedNotes.map(n => `- ${n.path}`).join('\n');
+      sections.push(`【挂载笔记】\n${paths}`);
     }
     sections.push(`【用户消息】\n`);
     return sections.join('\n\n');

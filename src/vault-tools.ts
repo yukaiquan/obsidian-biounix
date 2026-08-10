@@ -95,12 +95,16 @@ export async function scanVault(app: App): Promise<VaultReport> {
   let totalLinks = 0;
   let oldestNote: { path: string; date: number } | null = null;
   let newestNote: { path: string; date: number } | null = null;
+  // ★ 缓存每个文件的 wordCount，避免孤立笔记检测时重复 read（同一文件读 2 次）
+  const wordCountCache = new Map<string, number>();
 
   for (const file of files) {
     // 读取文件内容
     const content = await app.vault.read(file);
     const lines = content.split('\n');
-    totalWords += content.split(/\s+/).filter(Boolean).length;
+    const wc = content.split(/\s+/).filter(Boolean).length;
+    totalWords += wc;
+    wordCountCache.set(file.path, wc);
 
     // 更新最旧/最新笔记
     if (!oldestNote || file.stat.mtime < oldestNote.date) {
@@ -169,16 +173,15 @@ export async function scanVault(app: App): Promise<VaultReport> {
     }
   }
 
-  // 3. 孤立笔记检测（没有任何反向链接）
+  // 3. 孤立笔记检测（没有任何反向链接）——复用主循环的 wordCount 缓存，避免重复读盘
   const orphanNotes: OrphanNote[] = [];
   for (const file of files) {
     const backs = backlinks.get(file.path);
     if (!backs || backs.size === 0) {
-      const content = await app.vault.read(file);
       orphanNotes.push({
         path: file.path,
         name: file.basename,
-        wordCount: content.split(/\s+/).filter(Boolean).length,
+        wordCount: wordCountCache.get(file.path) || 0,
         lastModified: file.stat.mtime,
       });
     }
