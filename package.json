@@ -1,6 +1,6 @@
 {
   "name": "obsidian-biounix-plugin",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "BioUnix integration for Obsidian",
   "main": "dist/main.js",
   "scripts": {
