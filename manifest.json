@@ -1,10 +1,9 @@
 {
   "id": "biounix",
   "name": "BioUnix",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "minAppVersion": "1.7.2",
   "description": "Run bioinformatics commands, chat with an Agent, and browse skills and memories from BioUnix.",
   "author": "BioUnix",
-  "isDesktopOnly": true,
-  "iconUrl": "https://cdn.biounix.com/img/icon.png"
+  "isDesktopOnly": true
 }

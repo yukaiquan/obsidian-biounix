@@ -67,8 +67,7 @@ export class RecordTargetModal extends Modal {
         const dirRow = newPanel.createDiv({ cls: 'biounix-record-target-dir-row' });
         const dirDisplay = dirRow.createEl('div', { cls: 'biounix-record-target-dir-display', text: '📁 / (vault 根目录)' });
         const dirBtn = dirRow.createEl('button', { text: '选择…', cls: 'biounix-record-target-dir-btn' });
-        const dirDropdown = newPanel.createDiv({ cls: 'biounix-record-target-dir-dropdown' });
-        dirDropdown.style.display = 'none';
+        const dirDropdown = newPanel.createDiv({ cls: 'biounix-record-target-dir-dropdown is-hidden' });
 
         // 文件名输入
         newPanel.createEl('div', { text: '文件名（不含 .md）', cls: 'biounix-record-target-label' });
@@ -86,7 +85,7 @@ export class RecordTargetModal extends Modal {
             rootItem.onclick = () => {
                 this.selectedDir = '';
                 dirDisplay.setText('📁 / (vault 根目录)');
-                dirDropdown.style.display = 'none';
+                dirDropdown.addClass('is-hidden');
             };
             // 所有子目录（递归）
             const folders: TFolder[] = [];
@@ -107,26 +106,25 @@ export class RecordTargetModal extends Modal {
                 item.onclick = () => {
                     this.selectedDir = f.path;
                     dirDisplay.setText(`📁 ${f.path}/`);
-                    dirDropdown.style.display = 'none';
+                    dirDropdown.addClass('is-hidden');
                 };
             }
         };
 
         dirBtn.onclick = (e) => {
             e.stopPropagation();
-            if (dirDropdown.style.display === 'none') {
+            if (dirDropdown.hasClass('is-hidden')) {
                 buildDirList();
-                dirDropdown.style.display = 'block';
+                dirDropdown.removeClass('is-hidden');
             } else {
-                dirDropdown.style.display = 'none';
+                dirDropdown.addClass('is-hidden');
             }
         };
         // 点击外部关闭下拉
-        document.addEventListener('click', () => { dirDropdown.style.display = 'none'; }, { once: true });
+        document.addEventListener('click', () => { dirDropdown.addClass('is-hidden'); }, { once: true });
 
         // ===== 追加笔记面板 =====
-        const appendPanel = body.createDiv({ cls: 'biounix-record-target-panel' });
-        appendPanel.style.display = 'none';
+        const appendPanel = body.createDiv({ cls: 'biounix-record-target-panel is-hidden' });
         appendPanel.createEl('div', { text: '搜索并选择笔记', cls: 'biounix-record-target-label' });
         this.searchEl = appendPanel.createEl('input', {
             cls: 'biounix-record-target-search',
@@ -142,15 +140,15 @@ export class RecordTargetModal extends Modal {
             this.mode = 'new';
             newTab.addClass('is-active');
             appendTab.removeClass('is-active');
-            newPanel.style.display = 'block';
-            appendPanel.style.display = 'none';
+            newPanel.removeClass('is-hidden');
+            appendPanel.addClass('is-hidden');
         };
         appendTab.onclick = () => {
             this.mode = 'append';
             appendTab.addClass('is-active');
             newTab.removeClass('is-active');
-            appendPanel.style.display = 'block';
-            newPanel.style.display = 'none';
+            appendPanel.removeClass('is-hidden');
+            newPanel.addClass('is-hidden');
         };
 
         // 底部按钮

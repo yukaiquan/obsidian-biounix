@@ -47,13 +47,11 @@ export default class BioUnixPlugin extends Plugin {
     const ribbonIconEl = this.addRibbonIcon('flask-conical', 'BioUnix Agent', () => {
       void this.activateSidebar();
     });
-    // 把 Lucide svg 替换为插件自带 png 图标
+    // 把 Lucide svg 替换为远程 CDN 图标（manifest 不识别 iconUrl 字段，故在 JS 里引用）
     const svg = ribbonIconEl.querySelector('svg');
     if (svg) {
-      // 插件目录在 <vault>/.obsidian/plugins/biounix/，用 adapter.getResourcePath 获取可用 URL
-      const iconRelPath = `${this.manifest.dir}/icon.png`;
-      const iconUrl = this.app.vault.adapter.getResourcePath?.(iconRelPath) || '';
-      const img = ribbonIconEl.createEl('img', { attr: { src: iconUrl || 'icon.png' } });
+      const iconUrl = 'https://cdn.biounix.com/img/icon.png';
+      const img = ribbonIconEl.createEl('img', { attr: { src: iconUrl } });
       img.setCssProps({ width: '20px', height: '20px', objectFit: 'contain' });
       svg.replaceWith(img);
     }

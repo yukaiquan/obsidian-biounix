@@ -30,7 +30,7 @@ cd "$ROOT"
 echo "==> 构建 (npm run build)"
 npm run build
 
-# 组装 release 目录 —— 必须包含 icon.png
+# 组装 release 目录 —— 只含 Obsidian 会下载的 3 个文件（main.js / manifest.json / styles.css）
 echo "==> 组装 release/ 目录"
 rm -rf release
 mkdir -p release
@@ -38,35 +38,9 @@ mkdir -p release
 cp dist/main.js       release/main.js
 cp manifest.json      release/manifest.json
 cp styles.css         release/styles.css
-# ★ 关键：图标必须随 release 一起分发，否则用户安装后图标缺失
-cp icon.png           release/icon.png
 
 echo "==> release/ 目录内容:"
 ls -la release/
-
-# Validate: manifest icon reference exists in release/
-# Supports both "icon" and "iconUrl" fields
-ICON_FIELD=$(grep -o '"iconUrl"[[:space:]]*:[[:space:]]*"[^"]*"' release/manifest.json 2>/dev/null | sed 's/.*"iconUrl"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || true)
-if [[ -z "$ICON_FIELD" ]]; then
-    ICON_FIELD=$(grep -o '"icon"[[:space:]]*:[[:space:]]*"[^"]*"' release/manifest.json 2>/dev/null | sed 's/.*"icon"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || true)
-fi
-# Validate: manifest icon reference exists in release/
-# Supports both "icon" and "iconUrl" fields
-ICON_FIELD=$(grep -o '"iconUrl"[[:space:]]*:[[:space:]]*"[^"]*"' release/manifest.json 2>/dev/null | sed 's/.*"iconUrl"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || true)
-if [[ -z "$ICON_FIELD" ]]; then
-    ICON_FIELD=$(grep -o '"icon"[[:space:]]*:[[:space:]]*"[^"]*"' release/manifest.json 2>/dev/null | sed 's/.*"icon"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || true)
-fi
-if [[ -n "$ICON_FIELD" ]]; then
-    # Remote URL: skip local check (icon.png already copied to release/)
-    if [[ "$ICON_FIELD" == http* ]]; then
-        echo "ok: icon is remote URL: $ICON_FIELD (icon.png bundled in release/)"
-    elif [[ ! -f "release/$ICON_FIELD" ]]; then
-        echo "ERROR: manifest.json references icon \"$ICON_FIELD\" but file not in release/"
-        exit 1
-    else
-        echo "ok: icon verified: release/$ICON_FIELD"
-    fi
-fi
 
 if [[ "$UPLOAD" == "true" ]]; then
     if ! command -v gh >/dev/null 2>&1; then
@@ -79,12 +53,12 @@ if [[ "$UPLOAD" == "true" ]]; then
     if gh release view "$VERSION" --repo yukaiquan/obsidian-biounix >/dev/null 2>&1; then
         echo "   release $VERSION 已存在，上传资产..."
         gh release upload "$VERSION" \
-            release/main.js release/manifest.json release/styles.css release/icon.png \
+            release/main.js release/manifest.json release/styles.css \
             --repo yukaiquan/obsidian-biounix --clobber
     else
         echo "   创建新 release $VERSION..."
         gh release create "$VERSION" \
-            release/main.js release/manifest.json release/styles.css release/icon.png \
+            release/main.js release/manifest.json release/styles.css \
             --repo yukaiquan/obsidian-biounix \
             --title "BioUnix Obsidian Plugin v$VERSION" \
             --notes "Release v$VERSION"

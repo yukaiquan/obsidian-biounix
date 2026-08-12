@@ -2952,6 +2952,11 @@ body.theme-dark .biounix-code-block {
   position: relative;
   z-index: 10;
 }
+/* 隐藏类：替代 style.display 直接赋值（Obsidian lint 要求用 CSS 类） */
+.biounix-record-target-dir-dropdown.is-hidden,
+.biounix-record-target-panel.is-hidden {
+  display: none;
+}
 .biounix-record-target-dir-item {
   padding: 6px 10px;
   cursor: pointer;
