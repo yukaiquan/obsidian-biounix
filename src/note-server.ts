@@ -19,6 +19,7 @@
  *   GET  /notes/backlinks     查询反向链接 ?path=
  */
 import http from 'node:http';
+import path from 'node:path';
 import { TFile } from 'obsidian';
 import type { App } from 'obsidian';
 
@@ -41,6 +42,17 @@ export class NoteServer {
         if (this.server) return;
         const vault = this.app.vault;
         const adapter = vault.adapter as any;
+
+        // 统一路径安全校验：拒绝路径遍历（../ 段）和绝对路径，允许含字面 .. 的文件名（如 my..note.md）
+        const isSafeNotePath = (p: string): boolean => {
+            if (!p) return false;
+            if (path.isAbsolute(p)) return false; // 禁止绝对路径
+            const segs = p.split(/[/\\]+/);
+            for (const s of segs) {
+                if (s === '..') return false; // 精确检测 .. 段
+            }
+            return true;
+        };
 
         const server = http.createServer(async (req, res) => {
             // CORS + JSON
@@ -78,6 +90,10 @@ export class NoteServer {
                 if (path === '/notes/list') {
                     const folder = q('folder'); // 可选，如 "projects/"
                     const ext = q('ext') || 'md';
+                    if (folder && !isSafeNotePath(folder.endsWith('/') ? folder.slice(0, -1) : folder)) {
+                        this.sendJson(res, 400, { error: 'path traversal not allowed' });
+                        return;
+                    }
                     let files = vault.getMarkdownFiles();
                     if (folder) {
                         files = files.filter((f) => f.path.startsWith(folder));
@@ -97,6 +113,7 @@ export class NoteServer {
                 if (path === '/notes/read') {
                     const notePath = q('path');
                     if (!notePath) { this.sendJson(res, 400, { error: 'missing path' }); return; }
+                    if (!isSafeNotePath(notePath)) { this.sendJson(res, 400, { error: 'path traversal not allowed' }); return; }
                     if (!(await adapter.exists(notePath))) {
                         this.sendJson(res, 404, { error: `note not found: ${notePath}` });
                         return;
@@ -116,7 +133,7 @@ export class NoteServer {
                         return;
                     }
                     // 路径安全：禁止 .. 越界
-                    if (parsed.path.includes('..')) {
+                    if (!isSafeNotePath(parsed.path)) {
                         this.sendJson(res, 400, { error: 'path traversal not allowed' });
                         return;
                     }
@@ -178,6 +195,7 @@ export class NoteServer {
                 if (path === '/notes/frontmatter' && req.method !== 'POST') {
                     const notePath = q('path');
                     if (!notePath) { this.sendJson(res, 400, { error: 'missing path' }); return; }
+                    if (!isSafeNotePath(notePath)) { this.sendJson(res, 400, { error: 'path traversal not allowed' }); return; }
                     if (!(await adapter.exists(notePath))) {
                         this.sendJson(res, 404, { error: `note not found: ${notePath}` });
                         return;
@@ -194,6 +212,7 @@ export class NoteServer {
                     let parsed: { path?: string; data?: Record<string, any>; action?: 'set' | 'merge' | 'delete' };
                     try { parsed = JSON.parse(body); } catch { this.sendJson(res, 400, { error: 'invalid json' }); return; }
                     if (!parsed.path) { this.sendJson(res, 400, { error: 'missing path' }); return; }
+                    if (!isSafeNotePath(parsed.path)) { this.sendJson(res, 400, { error: 'path traversal not allowed' }); return; }
                     const file = vault.getAbstractFileByPath(parsed.path);
                     if (!file || !(file instanceof TFile)) {
                         this.sendJson(res, 404, { error: `note not found: ${parsed.path}` });
@@ -230,7 +249,7 @@ export class NoteServer {
                     if (!parsed.path || parsed.content === undefined) {
                         this.sendJson(res, 400, { error: 'missing path or content' }); return;
                     }
-                    if (parsed.path.includes('..')) { this.sendJson(res, 400, { error: 'path traversal not allowed' }); return; }
+                    if (!isSafeNotePath(parsed.path)) { this.sendJson(res, 400, { error: 'path traversal not allowed' }); return; }
                     const exists = await adapter.exists(parsed.path);
                     let newContent: string;
                     if (exists) {
@@ -254,7 +273,7 @@ export class NoteServer {
                     if (!parsed.path || parsed.content === undefined) {
                         this.sendJson(res, 400, { error: 'missing path or content' }); return;
                     }
-                    if (parsed.path.includes('..')) { this.sendJson(res, 400, { error: 'path traversal not allowed' }); return; }
+                    if (!isSafeNotePath(parsed.path)) { this.sendJson(res, 400, { error: 'path traversal not allowed' }); return; }
                     const exists = await adapter.exists(parsed.path);
                     let newContent: string;
                     if (exists) {
@@ -275,6 +294,7 @@ export class NoteServer {
                     let parsed: { path?: string; permanent?: boolean };
                     try { parsed = JSON.parse(body); } catch { this.sendJson(res, 400, { error: 'invalid json' }); return; }
                     if (!parsed.path) { this.sendJson(res, 400, { error: 'missing path' }); return; }
+                    if (!isSafeNotePath(parsed.path)) { this.sendJson(res, 400, { error: 'path traversal not allowed' }); return; }
                     const file = vault.getAbstractFileByPath(parsed.path);
                     if (!file || !(file instanceof TFile)) {
                         this.sendJson(res, 404, { error: `note not found: ${parsed.path}` });
@@ -295,7 +315,7 @@ export class NoteServer {
                     let parsed: { path?: string; newPath?: string };
                     try { parsed = JSON.parse(body); } catch { this.sendJson(res, 400, { error: 'invalid json' }); return; }
                     if (!parsed.path || !parsed.newPath) { this.sendJson(res, 400, { error: 'missing path or newPath' }); return; }
-                    if (parsed.newPath.includes('..')) { this.sendJson(res, 400, { error: 'path traversal not allowed' }); return; }
+                    if (!isSafeNotePath(parsed.path) || !isSafeNotePath(parsed.newPath)) { this.sendJson(res, 400, { error: 'path traversal not allowed' }); return; }
                     const file = vault.getAbstractFileByPath(parsed.path);
                     if (!file || !(file instanceof TFile)) {
                         this.sendJson(res, 404, { error: `note not found: ${parsed.path}` });
@@ -334,6 +354,7 @@ export class NoteServer {
                 if (path === '/notes/links') {
                     const notePath = q('path');
                     if (!notePath) { this.sendJson(res, 400, { error: 'missing path' }); return; }
+                    if (!isSafeNotePath(notePath)) { this.sendJson(res, 400, { error: 'path traversal not allowed' }); return; }
                     const file = vault.getAbstractFileByPath(notePath);
                     if (!file || !(file instanceof TFile)) {
                         this.sendJson(res, 404, { error: `note not found: ${notePath}` });
@@ -365,6 +386,7 @@ export class NoteServer {
                 if (path === '/notes/backlinks') {
                     const notePath = q('path');
                     if (!notePath) { this.sendJson(res, 400, { error: 'missing path' }); return; }
+                    if (!isSafeNotePath(notePath)) { this.sendJson(res, 400, { error: 'path traversal not allowed' }); return; }
                     const backlinks = this.findBacklinks(notePath);
                     this.sendJson(res, 200, { path: notePath, count: backlinks.length, backlinks });
                     return;

@@ -116,12 +116,15 @@ export class RecordTargetModal extends Modal {
             if (dirDropdown.hasClass('is-hidden')) {
                 buildDirList();
                 dirDropdown.removeClass('is-hidden');
+                // 延迟绑定 document once 监听器，避免当前 click 事件冒泡立即触发关闭
+                // 每次打开都重新绑定（once 监听器会被消耗，需重新注册）
+                setTimeout(() => {
+                    document.addEventListener('click', () => { dirDropdown.addClass('is-hidden'); }, { once: true });
+                }, 0);
             } else {
                 dirDropdown.addClass('is-hidden');
             }
         };
-        // 点击外部关闭下拉
-        document.addEventListener('click', () => { dirDropdown.addClass('is-hidden'); }, { once: true });
 
         // ===== 追加笔记面板 =====
         const appendPanel = body.createDiv({ cls: 'biounix-record-target-panel is-hidden' });

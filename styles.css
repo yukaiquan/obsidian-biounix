@@ -757,6 +757,9 @@ body {
   font-size: 0.9em;
   line-height: 1.6;
   position: relative;
+  /* 显式允许文本选择（防止祖先 user-select:none 继承） */
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .biounix-chat-role-row {
@@ -764,6 +767,8 @@ body {
   align-items: center;
   gap: 6px;
   margin-bottom: 4px;
+  /* 角色标识为装饰性，不参与文本选择 */
+  user-select: none;
 }
 
 .biounix-chat-role-icon {
@@ -805,6 +810,50 @@ body {
 .biounix-chat-content {
   white-space: pre-wrap;
   word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* 系统消息默认折叠：气泡缩小为单行 */
+.biounix-chat-bubble.is-collapsed {
+  padding: 6px 12px;
+  font-size: 0.82em;
+}
+.biounix-chat-bubble.is-collapsed .biounix-chat-role-row {
+  margin-bottom: 0;
+  cursor: pointer;
+}
+.biounix-chat-bubble.is-collapsed .biounix-chat-role-row:hover {
+  color: var(--text-accent);
+}
+.biounix-chat-role-summary {
+  color: var(--text-muted);
+  font-size: 0.95em;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.85;
+  margin-left: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 400px;
+}
+.biounix-chat-role-toggle {
+  margin-left: auto;
+  font-size: 0.85em;
+  color: var(--text-accent);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+.biounix-chat-bubble.is-collapsed
+  .biounix-chat-role-row:hover
+  .biounix-chat-role-toggle {
+  opacity: 1;
+}
+/* 系统消息折叠时隐藏底部操作行（展开后再显示） */
+.biounix-chat-bubble.is-collapsed .biounix-chat-footer {
+  display: none;
 }
 
 /* assistant 消息中的 markdown 内容重置 */
@@ -1114,6 +1163,294 @@ body {
   margin-bottom: 8px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* 预览加载占位（读取/渲染大笔记期间显示） */
+.biounix-note-browser-preview-loading {
+  padding: 24px 12px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
+/* 标题旁的操作提示 */
+.biounix-note-browser-hint {
+  font-size: 0.7em;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-left: 6px;
+}
+
+/* 段落级索引选取：每段可点击高亮 */
+.biounix-note-browser-para {
+  padding: 4px 8px;
+  margin: 2px 0;
+  border-radius: var(--biounix-radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+.biounix-note-browser-para:hover {
+  background: var(--background-secondary);
+  border-color: var(--background-modifier-border);
+}
+/* 选中段：强调高亮 + 左侧色条 */
+.biounix-note-browser-para.is-selected {
+  background: var(--biounix-color-info-bg);
+  border-color: var(--interactive-accent);
+  border-left: 3px solid var(--interactive-accent);
+}
+/* 段内首元素去除外边距，避免段间距过大 */
+.biounix-note-browser-para > *:first-child {
+  margin-top: 0;
+}
+.biounix-note-browser-para > *:last-child {
+  margin-bottom: 0;
+}
+
+/* 列表项名称行（文件名 + 编辑徽章横向排列） */
+.biounix-note-browser-item-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* 编辑次数徽章 */
+.biounix-note-browser-edit-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--biounix-color-info-bg, var(--background-modifier-info));
+  color: var(--biounix-color-info, var(--text-accent));
+  font-size: 0.7em;
+  font-weight: 600;
+  line-height: 1.4;
+  flex-shrink: 0;
+  white-space: nowrap;
+  cursor: help;
+}
+.biounix-note-browser-edit-badge.is-all-undone {
+  opacity: 0.5;
+  background: var(--background-modifier-border);
+  color: var(--text-muted);
+}
+
+/* 修改痕迹面板（预览区顶部，折叠式） */
+.biounix-note-browser-trace {
+  margin-bottom: 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--biounix-radius-sm, 6px);
+  background: var(--background-secondary);
+  overflow: hidden;
+}
+.biounix-note-browser-trace-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.82em;
+}
+.biounix-note-browser-trace-head:hover {
+  background: var(--background-modifier-hover);
+}
+.biounix-note-browser-trace-icon {
+  color: var(--text-accent);
+}
+.biounix-note-browser-trace-title {
+  font-weight: 600;
+  flex: 1;
+}
+.biounix-note-browser-trace-toggle {
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+.biounix-note-browser-trace-body {
+  padding: 4px 8px 8px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+/* 单条编辑记录行 */
+.biounix-note-browser-trace-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-bottom: 1px dashed var(--background-modifier-border);
+  flex-wrap: wrap;
+}
+.biounix-note-browser-trace-row:last-child {
+  border-bottom: none;
+}
+.biounix-note-browser-trace-row.is-undone {
+  opacity: 0.6;
+}
+.biounix-note-browser-trace-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  flex-wrap: wrap;
+  font-size: 0.8em;
+}
+.biounix-note-browser-trace-seq {
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 28px;
+}
+.biounix-note-browser-trace-time {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.biounix-note-browser-trace-bytes {
+  color: var(--text-normal);
+  font-variant-numeric: tabular-nums;
+}
+.biounix-note-browser-trace-undone-badge {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--background-modifier-border);
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+.biounix-note-browser-trace-btns {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.biounix-note-browser-trace-btn {
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: 0.8em;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+.biounix-note-browser-trace-btn:hover {
+  background: var(--background-modifier-hover);
+}
+.biounix-note-browser-trace-btn.is-undo {
+  color: var(--text-error);
+  border-color: var(--text-error);
+}
+.biounix-note-browser-trace-btn.is-undo:hover {
+  background: var(--background-modifier-error);
+}
+.biounix-note-browser-trace-btn.is-redo {
+  color: var(--text-success, var(--text-accent));
+  border-color: var(--text-success, var(--text-accent));
+}
+.biounix-note-browser-trace-btn.is-redo:hover {
+  background: var(
+    --background-modifier-success,
+    var(--background-modifier-hover)
+  );
+}
+/* 按钮 disabled 态（loading 期间防重复点击） */
+.biounix-note-browser-trace-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.biounix-note-browser-trace-btn:disabled:hover {
+  background: var(--background-primary);
+}
+/* 头部批量操作按钮组 */
+.biounix-note-browser-trace-head-btns {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  margin-right: 8px;
+}
+.biounix-note-browser-trace-head-btns .biounix-note-browser-trace-btn {
+  font-size: 0.75em;
+  padding: 1px 6px;
+}
+/* "显示全部"按钮行 */
+.biounix-note-browser-trace-more {
+  padding: 6px 0;
+  text-align: center;
+  border-top: 1px dashed var(--background-modifier-border);
+  margin-top: 4px;
+}
+.biounix-note-browser-trace-more-btn {
+  background: none;
+  border: none;
+  color: var(--text-accent);
+  cursor: pointer;
+  font-size: 0.8em;
+  padding: 4px 12px;
+  border-radius: 4px;
+}
+.biounix-note-browser-trace-more-btn:hover {
+  background: var(--background-modifier-hover);
+}
+/* 单条编辑的 diff 展开区（懒加载） */
+.biounix-note-browser-trace-diff {
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px;
+  border-radius: 4px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  max-height: 320px;
+  overflow: auto;
+}
+
+/* 行级 diff（复用 sidebar 风格） */
+.biounix-note-browser-diff,
+.biounix-line-diff {
+  font-family: var(--font-monospace);
+  font-size: 0.8em;
+  line-height: 1.5;
+}
+.biounix-diff-row {
+  display: flex;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.biounix-diff-prefix {
+  width: 18px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  user-select: none;
+}
+.biounix-diff-text {
+  flex: 1;
+}
+.biounix-diff-add {
+  background: var(--background-modifier-success, rgba(46, 160, 67, 0.12));
+}
+.biounix-diff-add .biounix-diff-prefix {
+  color: var(--text-success, #2ea043);
+}
+.biounix-diff-del {
+  background: var(--background-modifier-error, rgba(248, 81, 73, 0.12));
+}
+.biounix-diff-del .biounix-diff-prefix {
+  color: var(--text-error, #f85149);
+}
+.biounix-diff-ctx {
+  color: var(--text-muted);
+}
+.biounix-diff-summary {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 0.8em;
+}
+.biounix-diff-add-count {
+  color: var(--text-success, #2ea043);
+  font-weight: 600;
+}
+.biounix-diff-del-count {
+  color: var(--text-error, #f85149);
+  font-weight: 600;
 }
 
 .biounix-note-browser-preview-content {
@@ -1462,11 +1799,18 @@ body {
   align-items: center;
   gap: 4px;
   margin-top: 6px;
-  opacity: 0.5;
+  opacity: 0;
   transition: opacity 0.15s;
+  pointer-events: none;
 }
 .biounix-chat-bubble:hover .biounix-chat-footer {
   opacity: 1;
+  pointer-events: auto;
+}
+/* 流式生成中始终显示操作按钮（避免 hover 切换闪烁） */
+.biounix-chat-bubble.is-streaming .biounix-chat-footer {
+  opacity: 1;
+  pointer-events: auto;
 }
 .biounix-chat-time {
   font-size: 0.7em;
@@ -1572,13 +1916,15 @@ body {
   height: 20px;
   opacity: 0;
   transition: opacity 0.15s;
+  pointer-events: none;
+}
+.biounix-code-pre:hover .biounix-code-copy {
+  opacity: 1;
+  pointer-events: auto;
 }
 .biounix-code-copy svg {
   width: 13px;
   height: 13px;
-}
-.biounix-code-pre:hover .biounix-code-copy {
-  opacity: 1;
 }
 .biounix-code-copy:hover {
   background: var(--background-modifier-hover);
@@ -2522,6 +2868,70 @@ body {
 .biounix-remote-browser-retry {
   font-size: 0.85em;
   padding: 4px 12px;
+}
+
+/* ============ 工作区表单容器（create-session-modal） ============ */
+/* 动态重建的 local/remote/wsl 表单统一分组，与 section-title 视觉对齐 */
+.biounix-workspace-form {
+  margin-top: 4px;
+  padding-left: 0;
+}
+/* chat 模式禁用整个工作区表单 */
+.biounix-workspace-form.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+/* 工作区内多个 Setting 项之间无额外间距（Setting 自带 padding），但加左边框增强分组感 */
+.biounix-workspace-form .setting-item {
+  border-left: 2px solid var(--background-modifier-border);
+  padding-left: 12px;
+}
+
+/* ============ API Key 显示/隐藏切换按钮 ============ */
+.biounix-apikey-toggle {
+  font-size: var(--biounix-font-md);
+  line-height: 1;
+  user-select: none;
+}
+.biounix-apikey-toggle:hover {
+  background: var(--background-modifier-hover) !important;
+}
+
+/* ============ 主机公钥确认对话框 ============ */
+.biounix-confirm-hostkey {
+  padding: 4px 0;
+}
+.biounix-hostkey-pre {
+  margin: 0 0 12px 0;
+  padding: 10px 12px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--biounix-radius-md);
+  font-family: var(--font-monospace);
+  font-size: var(--biounix-font-sm);
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+}
+.biounix-hostkey-warning {
+  margin: 0 0 16px 0;
+  padding: 8px 12px;
+  background: var(--biounix-color-warning-bg);
+  border-left: 3px solid var(--biounix-color-warning);
+  color: var(--biounix-color-warning);
+  font-size: var(--biounix-font-md);
+  line-height: 1.5;
+}
+.biounix-hostkey-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.biounix-hostkey-btns button {
+  padding: 8px 18px;
+  border-radius: var(--biounix-radius-md);
+  font-size: 14px;
+  cursor: pointer;
 }
 
 /* ============ 交互模态框（AI 确认/选择） ============ */

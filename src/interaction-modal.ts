@@ -37,6 +37,8 @@ export class InteractionModal extends Modal {
     private plugin: BioUnixPlugin;
     private request: InteractionRequest;
     private submitted = false;
+    /** Enter 快捷键监听器（onClose 时清理，防内存泄漏） */
+    private keyHandler: ((e: KeyboardEvent) => void) | null = null;
 
     constructor(app: App, plugin: BioUnixPlugin, request: InteractionRequest) {
         super(app);
@@ -66,6 +68,11 @@ export class InteractionModal extends Modal {
     }
 
     onClose(): void {
+        // 清理 Enter 快捷键监听器（防内存泄漏）
+        if (this.keyHandler) {
+            document.removeEventListener('keydown', this.keyHandler, true);
+            this.keyHandler = null;
+        }
         // 用户关闭模态框（点 X 或 Esc）且未提交 → 视为取消
         if (!this.submitted) {
             void this.submit({ cancelled: true });
@@ -126,6 +133,22 @@ export class InteractionModal extends Modal {
             confirmClass: riskClass === 'critical' || riskClass === 'high'
                 ? 'biounix-btn-danger' : 'biounix-btn-primary',
         });
+
+        // 键盘快捷键：Enter 确认（仅低/中风险，高/critical 需手动点击防误触）
+        // Esc 由 Modal 基类 onClose 处理（未提交视为 cancelled）
+        if (riskClass !== 'critical' && riskClass !== 'high') {
+            this.keyHandler = (e: KeyboardEvent): void => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    document.removeEventListener('keydown', this.keyHandler!, true);
+                    this.keyHandler = null;
+                    void this.submit({ approved: true, remember });
+                }
+            };
+            // 捕获阶段绑定，避免被内部输入框吞掉
+            document.addEventListener('keydown', this.keyHandler, true);
+        }
     }
 
     // ============ 选项选择 ============

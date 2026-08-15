@@ -78,8 +78,10 @@ export class BioUnixChatView extends ItemView {
   private statusEl: HTMLElement | null = null;
   /** 用于 MarkdownRenderer 的组件生命周期管理 */
   private mdComponent: Component | null = null;
-  /** 是否正在流式接收 */
-  private streaming = false;
+  /** 正在流式生成的会话 ID（按会话隔离，切换会话不影响其他会话的后台生成）；null=无流式 */
+  private streamingSessionId: string | null = null;
+  /** 便捷判断：当前会话是否正在流式（streamingSessionId === sessionId） */
+  private get streaming(): boolean { return this.streamingSessionId !== null && this.streamingSessionId === this.sessionId; }
   /** 正在显示的交互请求 tool_call_id 集合（防止重复弹窗） */
   private activeInteractionIds: Set<string> = new Set();
   /** 发送按钮元素（streaming 时切换为“停止”按钮） */
@@ -279,6 +281,9 @@ export class BioUnixChatView extends ItemView {
         this.sendMessage();
         new Notice('已发送笔记作为上下文');
       },
+      // 传入当前会话 ID + API 客户端，启用修改痕迹功能
+      this.sessionId,
+      this.plugin.api,
     ).open();
   }
 
@@ -393,10 +398,19 @@ export class BioUnixChatView extends ItemView {
       // ★ 调试日志：确认 WS 事件到达插件
       console.log('[biounix-ws] recv', data.type, 'sid=', (data as { sessionId?: string }).sessionId, 'cur=', this.sessionId);
       if (!this.sessionId) return;
-      // 只处理当前会话的事件
       const sid = (data as { sessionId?: string }).sessionId;
+      // ★ agent:done/error 即使来自非当前会话也要处理：清空对应 streamingSessionId，
+      //   否则切回该会话时按钮仍显示"停止"（后台生成已结束但本地状态未同步）。
       if (sid && sid !== this.sessionId) {
-        console.log('[biounix-ws] 过滤: 事件 sid != 当前 sessionId');
+        if (data.type === 'agent:done' || data.type === 'agent:error') {
+          if (this.streamingSessionId === sid) {
+            this.streamingSessionId = null;
+            console.log('[biounix-ws] 后台会话流式结束:', sid.slice(0, 8));
+            // 若恰好切回该会话，刷新按钮状态
+            if (this.sessionId === sid) this.updateSendButton();
+          }
+        }
+        // 非当前会话的 chunk/reasoning/tool:call/interaction 过滤（避免后台 UI 抖动）
         return;
       }
       if (data.type === 'agent:chunk' && data.content) {
@@ -471,7 +485,7 @@ export class BioUnixChatView extends ItemView {
     if (!this.sessionId) return;
     try {
       await this.plugin.api.stopSession(this.sessionId);
-      this.streaming = false;
+      this.streamingSessionId = null;
       this.updateStatus();
       this.updateSendButton();
       new Notice('已停止生成');
@@ -734,8 +748,8 @@ export class BioUnixChatView extends ItemView {
 
   /** WebSocket 回调：更新最后一条 assistant 消息（rAF 节流 + 增量 DOM 更新） */
   onStreamChunk(content: string): void {
-    if (!this.streaming) {
-      this.streaming = true;
+    if (!this.streamingSessionId) {
+      this.streamingSessionId = this.sessionId;
       this.updateStatus();
       this.updateSendButton();
     }
@@ -789,7 +803,7 @@ export class BioUnixChatView extends ItemView {
   }
 
   onStreamDone(): void {
-    this.streaming = false;
+    this.streamingSessionId = null;
     // 取消待执行的 rAF（避免流式结束后还跑增量更新）
     if (this.renderRaf !== null) {
       cancelAnimationFrame(this.renderRaf);
@@ -940,6 +954,41 @@ export class BioUnixChatView extends ItemView {
 
       // 内容区：assistant 用 Markdown 渲染，user/system 用纯文本
       const contentEl = bubble.createDiv({ cls: 'biounix-chat-content' });
+
+      // 系统消息默认折叠（点击 roleRow 展开/收起），避免长系统提示占满屏幕
+      if (msg.role === 'system') {
+        bubble.addClass('is-collapsed');
+        contentEl.setCssProps({ display: 'none' });
+        // roleRow 显示内容摘要 + 展开提示
+        const summary = msg.content.replace(/\s+/g, ' ').trim().slice(0, 60);
+        const summaryEl = roleRow.createEl('span', {
+          text: summary + (msg.content.length > 60 ? '…' : ''),
+          cls: 'biounix-chat-role-summary',
+          attr: { title: '点击展开/收起系统消息' },
+        });
+        const toggleEl = roleRow.createEl('span', { text: '▸ 展开', cls: 'biounix-chat-role-toggle' });
+        let sysExpanded = false;
+        roleRow.addClass('is-collapsible');
+        roleRow.setAttribute('role', 'button');
+        roleRow.setAttribute('tabindex', '0');
+        roleRow.setAttribute('aria-expanded', 'false');
+        const toggleSys = () => {
+          sysExpanded = !sysExpanded;
+          contentEl.setCssProps({ display: sysExpanded ? 'block' : 'none' });
+          toggleEl.setText(sysExpanded ? '▾ 收起' : '▸ 展开');
+          bubble.toggleClass('is-collapsed', !sysExpanded);
+          roleRow.setAttribute('aria-expanded', sysExpanded ? 'true' : 'false');
+          summaryEl.setCssProps({ display: sysExpanded ? 'none' : 'inline' });
+        };
+        roleRow.onclick = (ev) => {
+          // 避免点击 roleRow 内的按钮（如有）触发折叠
+          if ((ev.target as HTMLElement).closest('button')) return;
+          toggleSys();
+        };
+        roleRow.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggleSys(); }
+        });
+      }
       if (msg.role === 'assistant') {
         // 思维链折叠展示（在正文之前）
         if (msg.reasoning) {
@@ -998,6 +1047,8 @@ export class BioUnixChatView extends ItemView {
           contentEl.setText(msg.content);
         }
       }
+      // user/system 消息内容确保可选（assistant 经 Markdown 渲染默认可选）
+      contentEl.addClass('biounix-chat-content-selectable');
 
       // 底部行：时间 + 操作按钮组
       const footerRow = bubble.createDiv({ cls: 'biounix-chat-footer' });
@@ -1136,7 +1187,7 @@ export class BioUnixChatView extends ItemView {
     this.recordStartIdx = this.messages.length - 1;
     const assistantMsg: ChatMessage = { role: 'assistant', content: '⏳ 思考中...', timestamp: Date.now() };
     this.messages.push(assistantMsg);
-    this.streaming = true;
+    this.streamingSessionId = this.sessionId;
     this.updateStatus();
     this.renderMessages();
     try {
@@ -1146,7 +1197,7 @@ export class BioUnixChatView extends ItemView {
     } catch (e) {
       assistantMsg.content = `❌ 发送失败: ${(e as Error).message}`;
       this.renderMessages();
-      this.streaming = false;
+      this.streamingSessionId = null;
       this.updateSendButton();
     }
   }
@@ -2093,13 +2144,11 @@ export class BioUnixChatView extends ItemView {
       if (this.sessionPanelEl) { this.sessionPanelEl.remove(); this.sessionPanelEl = null; }
       return;
     }
-    // 停止当前流
-    if (this.streaming && this.sessionId) {
-      void this.plugin.api.stopSession(this.sessionId).catch(() => { });
-    }
+    // ★ 不强制停止旧会话的流式生成：让其在后台继续，切回时可恢复状态。
+    //   仅切换本地视图，streamingSessionId 保留旧会话的流式标记（若旧会话在生成，
+    //   切到新会话后 this.streaming getter 因 sessionId 变化返回 false，按钮显示"发送"）。
     this.sessionId = sessionId;
     this.messages = [];
-    this.streaming = false;
     // 切换会话：重置记录决定（首次发送时重新询问）
     this.recordDecision = 'unset';
     this.recordTarget = null;
@@ -2109,6 +2158,14 @@ export class BioUnixChatView extends ItemView {
       const infoRes = await this.plugin.api.getSession(sessionId);
       if (infoRes.ok && infoRes.session) {
         const s = infoRes.session as any;
+        // ★ 根据后端权威 status 同步流式状态：若目标会话后端标记 running，
+        //   则本地 streamingSessionId 指向它（切回时按钮正确显示"停止"）；
+        //   否则若 streamingSessionId 恰好指向该会话（如刚 done），清空。
+        if (s.status === 'running') {
+          this.streamingSessionId = sessionId;
+        } else if (this.streamingSessionId === sessionId) {
+          this.streamingSessionId = null;
+        }
         this.sessionInfo = {
           provider: s.apiConfig?.provider || 'unknown',
           model: s.model || 'unknown',

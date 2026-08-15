@@ -98,26 +98,32 @@ export async function scanVault(app: App): Promise<VaultReport> {
   // ★ 缓存每个文件的 wordCount，避免孤立笔记检测时重复 read（同一文件读 2 次）
   const wordCountCache = new Map<string, number>();
 
-  for (const file of files) {
-    // 读取文件内容
+  // 单文件处理结果（并发安全，每个文件独立处理）
+  interface FileResult {
+    path: string;
+    mtime: number;
+    wordCount: number;
+    deadLinks: DeadLink[];
+    frontmatterIssues: FrontmatterIssue[];
+    brokenImages: BrokenImage[];
+    links: { from: string; to: string }[]; // 有效链接，供 linkGraph/backlinks 合并
+    tags: { tag: string; file: string }[]; // 标签，供 tagMap 合并
+  }
+
+  const processFile = async (file: TFile): Promise<FileResult> => {
     const content = await app.vault.read(file);
     const lines = content.split('\n');
     const wc = content.split(/\s+/).filter(Boolean).length;
-    totalWords += wc;
-    wordCountCache.set(file.path, wc);
+    const fDeadLinks: DeadLink[] = [];
+    const fFrontmatterIssues: FrontmatterIssue[] = [];
+    const fBrokenImages: BrokenImage[] = [];
+    const fLinks: { from: string; to: string }[] = [];
+    const fTags: { tag: string; file: string }[] = [];
 
-    // 更新最旧/最新笔记
-    if (!oldestNote || file.stat.mtime < oldestNote.date) {
-      oldestNote = { path: file.path, date: file.stat.mtime };
-    }
-    if (!newestNote || file.stat.mtime > newestNote.date) {
-      newestNote = { path: file.path, date: file.stat.mtime };
-    }
+    // frontmatter 检查
+    checkFrontmatter(file.path, content, fFrontmatterIssues);
 
-    // 1. frontmatter 检查
-    checkFrontmatter(file.path, content, frontmatterIssues);
-
-    // 2. 逐行扫描链接、图片、标签
+    // 逐行扫描链接、图片、标签
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
@@ -125,15 +131,12 @@ export async function scanVault(app: App): Promise<VaultReport> {
       const wikiLinks = line.matchAll(/\[\[([^\]|#]+)(?:#|\||\]\])/g);
       for (const match of wikiLinks) {
         const target = match[1].trim();
-        totalLinks++;
         if (!allPaths.has(target) && !allPaths.has(target + '.md')) {
-          deadLinks.push({ sourceFile: file.path, linkTarget: target, line: i + 1 });
+          fDeadLinks.push({ sourceFile: file.path, linkTarget: target, line: i + 1 });
         } else {
-          // 有效链接，记录到 linkGraph 和 backlinks
           const targetFile = fileCache.get(target) || fileCache.get(target + '.md');
           if (targetFile) {
-            linkGraph.get(file.path)?.add(targetFile.path);
-            backlinks.get(targetFile.path)?.add(file.path);
+            fLinks.push({ from: file.path, to: targetFile.path });
           }
         }
       }
@@ -144,17 +147,16 @@ export async function scanVault(app: App): Promise<VaultReport> {
         const imgRef = match[1].trim();
         const imgFile = app.vault.getAbstractFileByPath(imgRef);
         if (!imgFile) {
-          brokenImages.push({ sourceFile: file.path, imageRef: imgRef, line: i + 1 });
+          fBrokenImages.push({ sourceFile: file.path, imageRef: imgRef, line: i + 1 });
         }
       }
       const mdImages = line.matchAll(/!\[.*?\]\(([^)]+)\)/g);
       for (const match of mdImages) {
         const imgRef = match[1].trim();
-        // 仅检查相对路径（http 开头跳过）
         if (!imgRef.startsWith('http') && !allPaths.has(imgRef)) {
           const imgFile = app.vault.getAbstractFileByPath(imgRef);
           if (!imgFile) {
-            brokenImages.push({ sourceFile: file.path, imageRef: imgRef, line: i + 1 });
+            fBrokenImages.push({ sourceFile: file.path, imageRef: imgRef, line: i + 1 });
           }
         }
       }
@@ -163,13 +165,59 @@ export async function scanVault(app: App): Promise<VaultReport> {
       const tags = line.matchAll(/(?:^|\s)#([a-zA-Z\u4e00-\u9fa5][\w\u4e00-\u9fa5/-]*)/g);
       for (const match of tags) {
         const tag = match[1].toLowerCase();
-        if (!tagMap.has(tag)) {
-          tagMap.set(tag, { count: 0, files: new Set() });
-        }
-        const entry = tagMap.get(tag)!;
-        entry.count++;
-        entry.files.add(file.path);
+        fTags.push({ tag, file: file.path });
       }
+    }
+
+    return {
+      path: file.path,
+      mtime: file.stat.mtime,
+      wordCount: wc,
+      deadLinks: fDeadLinks,
+      frontmatterIssues: fFrontmatterIssues,
+      brokenImages: fBrokenImages,
+      links: fLinks,
+      tags: fTags,
+    };
+  };
+
+  // 分批并发读取（BATCH=20，避免一次性打开过多文件句柄）
+  const BATCH = 20;
+  const results: FileResult[] = [];
+  for (let i = 0; i < files.length; i += BATCH) {
+    const batch = files.slice(i, i + BATCH);
+    const batchResults = await Promise.allSettled(batch.map(processFile));
+    for (const r of batchResults) {
+      if (r.status === 'fulfilled') results.push(r.value);
+      // rejected 的文件跳过（读取失败，如权限问题）
+    }
+  }
+
+  // 合并各文件结果到全局状态
+  for (const r of results) {
+    totalWords += r.wordCount;
+    totalLinks += r.deadLinks.length + r.links.length;
+    wordCountCache.set(r.path, r.wordCount);
+    deadLinks.push(...r.deadLinks);
+    frontmatterIssues.push(...r.frontmatterIssues);
+    brokenImages.push(...r.brokenImages);
+    for (const link of r.links) {
+      linkGraph.get(link.from)?.add(link.to);
+      backlinks.get(link.to)?.add(link.from);
+    }
+    for (const t of r.tags) {
+      if (!tagMap.has(t.tag)) {
+        tagMap.set(t.tag, { count: 0, files: new Set() });
+      }
+      const entry = tagMap.get(t.tag)!;
+      entry.count++;
+      entry.files.add(t.file);
+    }
+    if (!oldestNote || r.mtime < oldestNote.date) {
+      oldestNote = { path: r.path, date: r.mtime };
+    }
+    if (!newestNote || r.mtime > newestNote.date) {
+      newestNote = { path: r.path, date: r.mtime };
     }
   }
 

@@ -47,6 +47,8 @@ export interface BioUnixSession {
   name?: string;
   mode?: string;
   model?: string | null;
+  /** 会话流式生成状态：idle=空闲，running=正在生成，interrupted=崩溃中断 */
+  status?: 'idle' | 'running' | 'interrupted';
   startedAt?: number;
   updated_at?: number;
   terminalTabId?: string | null;
@@ -254,6 +256,10 @@ export class BioUnixAPI {
   getFileHistory(sessionId: string, filePath: string, withContent = false): Promise<RunCommandResult> {
     return this.request('GET', `/api/sessions/${sessionId}/file-history?filePath=${encodeURIComponent(filePath)}&withContent=${withContent ? '1' : '0'}`);
   }
+  /** 查询某会话所有文件编辑记录（用于笔记浏览器显示修改痕迹徽章） */
+  getFileEdits(sessionId: string): Promise<RunCommandResult> {
+    return this.request('GET', `/api/sessions/${sessionId}/file-edits`);
+  }
   /** 更新会话配置（apiConfig / workspace / 启用范围等） */
   updateSession(sessionId: string, config: Record<string, unknown>): Promise<RunCommandResult> {
     return this.request('PUT', `/api/sessions/${sessionId}`, { config });
@@ -391,14 +397,19 @@ export class BioUnixAPI {
 
   private openWS(): void {
     const wsUrl = `ws://127.0.0.1:${this.extractPort() + 1}?token=${this.token}`;
-    this.ws = new WebSocket(wsUrl);
-    this.ws.onmessage = (e) => {
+    const ws = new WebSocket(wsUrl);
+    this.ws = ws;
+    ws.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data) as BioUnixWSEvent;
         this.wsListener?.(data);
       } catch { /* ignore parse errors */ }
     };
-    this.ws.onclose = () => {
+    ws.onclose = () => {
+      // ★ 仅当关闭的是「当前 ws」时才清理引用并考虑重连；
+      //   旧 ws（被 disconnectWS 关闭）的延迟 onclose 不得覆盖新 ws，也不得触发重连，
+      //   否则会产生多个并存连接导致同一消息被重复接收（表现为流式文本逐词重复）。
+      if (this.ws !== ws) return;
       this.ws = null;
       // 非手动关闭时自动重连（指数退避，上限 5s），避免后端重启/网络抖动后收不到流式
       if (!this.wsManuallyClosed) {
@@ -406,7 +417,7 @@ export class BioUnixAPI {
         this.wsReconnectTimer = window.setTimeout(() => this.openWS(), 2000);
       }
     };
-    this.ws.onerror = () => { /* onclose 会处理重连 */ };
+    ws.onerror = () => { /* onclose 会处理重连 */ };
   }
 
   disconnectWS(): void {
