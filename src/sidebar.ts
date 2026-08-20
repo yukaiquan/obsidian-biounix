@@ -3,7 +3,7 @@
  */
 import { ItemView, Notice, WorkspaceLeaf, MarkdownRenderer, Component, setIcon, Modal, TFile } from 'obsidian';
 import type BioUnixPlugin from './main';
-import type { BioUnixMessage, BioUnixSession } from './api';
+import type { BioUnixMessage, BioUnixSession, BioUnixWSEvent } from './api';
 import { CreateSessionModal, type CreateSessionInput } from './create-session-modal';
 import { NoteBrowserModal } from './note-browser-modal';
 import { InteractionModal, type InteractionRequest } from './interaction-modal';
@@ -63,6 +63,8 @@ export class BioUnixChatView extends ItemView {
   private messages: ChatMessage[] = [];
   private messageEl: HTMLElement | null = null;
   private inputEl: HTMLTextAreaElement | null = null;
+  /** IME 组合输入状态（compositionstart/end 手动跟踪，比 isComposing 更可靠） */
+  private isComposing = false;
   private sessionId: string | null = null;
   /** 当前会话的显示信息（provider/model/mode/workspaceKind） */
   private sessionInfo: { provider: string; model: string; mode: string; workspaceKind: 'local' | 'remote' | 'wsl' } | null = null;
@@ -223,8 +225,13 @@ export class BioUnixChatView extends ItemView {
     this.sendBtnEl = sendBtn;
 
     this.inputEl.addEventListener('input', () => this.updateCharCount());
+    // ★ IME 组合状态手动跟踪（isComposing 在部分输入法/浏览器下不可靠）
+    this.inputEl.addEventListener('compositionstart', () => { this.isComposing = true; });
+    this.inputEl.addEventListener('compositionend', () => { this.isComposing = false; });
     this.inputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
+      // ★ 排除 IME 组合输入中（中文输入法选词/确认拼音时回车不应发送）
+      //   双重检查：手动跟踪的 isComposing + 事件原生 isComposing，兼容不同输入法
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && !this.isComposing) {
         e.preventDefault();
         // 若快捷指令面板打开，回车选择当前项
         if (this.slashMenu && this.slashMenu.isOpen) {
@@ -371,8 +378,8 @@ export class BioUnixChatView extends ItemView {
       // 3) 设置安全级别（best-effort，失败不影响会话使用）
       void this.plugin.api.setSessionSecurity(session.id, input.securityLevel).catch(() => { /* 旧版后端无此路由时忽略 */ });
 
-      // 4) 连接 WebSocket 接收流式输出
-      this.connectWS();
+      // ★ WS 连接由 main.ts 统一管理：确保已连接即可（不重复建连）
+      this.plugin.ensureWebSocket();
 
       // 记录会话信息并更新状态栏
       this.sessionInfo = { provider: input.provider, model: input.model, mode: input.mode, workspaceKind: input.workspaceKind };
@@ -393,49 +400,48 @@ export class BioUnixChatView extends ItemView {
   }
 
   /** 连接 WebSocket 接收当前会话的流式输出 */
-  private connectWS(): void {
-    this.plugin.api.connectWS((data) => {
-      // ★ 调试日志：确认 WS 事件到达插件
-      console.log('[biounix-ws] recv', data.type, 'sid=', (data as { sessionId?: string }).sessionId, 'cur=', this.sessionId);
-      if (!this.sessionId) return;
-      const sid = (data as { sessionId?: string }).sessionId;
-      // ★ agent:done/error 即使来自非当前会话也要处理：清空对应 streamingSessionId，
-      //   否则切回该会话时按钮仍显示"停止"（后台生成已结束但本地状态未同步）。
-      if (sid && sid !== this.sessionId) {
-        if (data.type === 'agent:done' || data.type === 'agent:error') {
-          if (this.streamingSessionId === sid) {
-            this.streamingSessionId = null;
-            console.log('[biounix-ws] 后台会话流式结束:', sid.slice(0, 8));
-            // 若恰好切回该会话，刷新按钮状态
-            if (this.sessionId === sid) this.updateSendButton();
-          }
+  /** ★ 统一 WS 事件处理入口（由 main.ts connectWebSocket 分发，不再单独建连） */
+  handleWSEvent(data: BioUnixWSEvent): void {
+    // ★ 调试日志：确认 WS 事件到达插件
+    console.log('[biounix-ws] recv', data.type, 'sid=', (data as { sessionId?: string }).sessionId, 'cur=', this.sessionId);
+    if (!this.sessionId) return;
+    const sid = (data as { sessionId?: string }).sessionId;
+    // ★ agent:done/error 即使来自非当前会话也要处理：清空对应 streamingSessionId，
+    //   否则切回该会话时按钮仍显示"停止"（后台生成已结束但本地状态未同步）。
+    if (sid && sid !== this.sessionId) {
+      if (data.type === 'agent:done' || data.type === 'agent:error') {
+        if (this.streamingSessionId === sid) {
+          this.streamingSessionId = null;
+          console.log('[biounix-ws] 后台会话流式结束:', sid.slice(0, 8));
+          // 若恰好切回该会话，刷新按钮状态
+          if (this.sessionId === sid) this.updateSendButton();
         }
-        // 非当前会话的 chunk/reasoning/tool:call/interaction 过滤（避免后台 UI 抖动）
-        return;
       }
-      if (data.type === 'agent:chunk' && data.content) {
-        this.onStreamChunk(data.content);
-      } else if (data.type === 'agent:done') {
-        this.onStreamDone();
-      } else if (data.type === 'agent:error') {
-        const last = this.messages[this.messages.length - 1];
-        if (last && last.role === 'assistant') {
-          last.content = `❌ ${data.error || '生成失败'}`;
-          this.renderMessages();
-        }
-      } else if (data.type === 'tool:call') {
-        this.onToolCall(data as unknown as {
-          toolCallId: string; toolName: string;
-          status: 'running' | 'done' | 'error' | 'cancelled';
-          args?: string; result?: string;
-        });
-      } else if (data.type === 'agent:reasoning' && data.content) {
-        this.onReasoningChunk(data.content);
-      } else if (data.type === 'interaction:request') {
-        // AI 需要用户确认/选择：在 Obsidian 中弹出原生 Modal
-        this.onInteractionRequest(data as unknown as InteractionRequest);
+      // 非当前会话的 chunk/reasoning/tool:call/interaction 过滤（避免后台 UI 抖动）
+      return;
+    }
+    if (data.type === 'agent:chunk' && data.content) {
+      this.onStreamChunk(data.content);
+    } else if (data.type === 'agent:done') {
+      this.onStreamDone();
+    } else if (data.type === 'agent:error') {
+      const last = this.messages[this.messages.length - 1];
+      if (last && last.role === 'assistant') {
+        last.content = `❌ ${data.error || '生成失败'}`;
+        this.renderMessages();
       }
-    });
+    } else if (data.type === 'tool:call') {
+      this.onToolCall(data as unknown as {
+        toolCallId: string; toolName: string;
+        status: 'running' | 'done' | 'error' | 'cancelled';
+        args?: string; result?: string;
+      });
+    } else if (data.type === 'agent:reasoning' && data.content) {
+      this.onReasoningChunk(data.content);
+    } else if (data.type === 'interaction:request') {
+      // AI 需要用户确认/选择：在 Obsidian 中弹出原生 Modal
+      this.onInteractionRequest(data as unknown as InteractionRequest);
+    }
   }
 
   /** 处理 AI 的确认/选择请求：弹出 Obsidian 原生 Modal */
@@ -826,33 +832,7 @@ export class BioUnixChatView extends ItemView {
         // 竞态保护：若已开始新一轮流式，不覆盖（避免丢失用户刚发的新消息）
         if (this.streaming) return;
         if (res.ok && res.messages) {
-          this.messages = res.messages.map((m: BioUnixMessage) => {
-            const msg: ChatMessage = {
-              role: m.role,
-              content: m.content,
-              timestamp: m.timestamp,
-              reasoning: m.reasoning,
-            };
-            // 从后端 tool_calls 重建工具卡片基础信息（OpenAI 格式 → 插件 ToolCallInfo）
-            if (m.role === 'assistant' && m.tool_calls && m.tool_calls.length > 0) {
-              msg.toolCalls = m.tool_calls.map((tc) => {
-                const local = localToolCallMap.get(tc.id);
-                return {
-                  toolCallId: tc.id,
-                  toolName: tc.function.name,
-                  status: local?.status || ('done' as const),
-                  args: tc.function.arguments,
-                  // 本地有 result（含 undo_state 等实时状态）则优先用本地
-                  result: local?.result,
-                  timestamp: m.timestamp,
-                  // F5: 保留本地记录的 startTime/duration（后端不存这些）
-                  startTime: local?.startTime,
-                  duration: local?.duration,
-                };
-              });
-            }
-            return msg;
-          });
+          this.messages = this.normalizeBackendMessages(res.messages, localToolCallMap);
           this.renderMessages();
           // 处理过程结束，若用户选择记录则写入目标文件
           this.writeRecordIfNeeded();
@@ -865,6 +845,58 @@ export class BioUnixChatView extends ItemView {
       // 无 sessionId（不应发生），兜底
       this.writeRecordIfNeeded();
     }
+  }
+
+  /**
+   * ★ 归并后端消息：把独立 role='tool' 消息（工具结果）合并到对应 assistant 的 toolCalls.result，
+   *   并过滤掉 tool 消息（避免在 UI 显示成"系统"消息 + 原始 JSON 结果）。
+   *   主程序前端 normalizeMessages 有同样逻辑；插件侧独立实现以保持轻量。
+   *   localToolCallMap：本地已累积的 toolCalls（含实时状态/undo_state），优先于后端。
+   */
+  private normalizeBackendMessages(
+    backend: BioUnixMessage[],
+    localToolCallMap?: Map<string, ToolCallInfo>,
+  ): ChatMessage[] {
+    // 先扫一遍 tool 消息，按 tool_call_id 索引 result
+    const toolResultMap = new Map<string, string>();
+    for (const m of backend) {
+      const r = m.role as string;
+      if ((r === 'tool' || r === 'tool_result') && m.tool_call_id) {
+        toolResultMap.set(m.tool_call_id, m.content);
+      }
+    }
+    // 过滤掉 tool 消息，映射 assistant 消息时回填 result
+    return backend
+      .filter((m) => {
+        const r = m.role as string;
+        return r !== 'tool' && r !== 'tool_result';
+      })
+      .map((m: BioUnixMessage) => {
+        const msg: ChatMessage = {
+          role: m.role as ChatMessage['role'],
+          content: m.content,
+          timestamp: m.timestamp,
+          reasoning: m.reasoning,
+        };
+        if (m.role === 'assistant' && m.tool_calls && m.tool_calls.length > 0) {
+          msg.toolCalls = m.tool_calls.map((tc) => {
+            const local = localToolCallMap?.get(tc.id);
+            // 优先用本地 result（含 undo_state 等实时状态），否则从 tool 消息回填
+            const result = local?.result ?? toolResultMap.get(tc.id);
+            return {
+              toolCallId: tc.id,
+              toolName: tc.function.name,
+              status: local?.status || ('done' as const),
+              args: tc.function.arguments,
+              result,
+              timestamp: m.timestamp,
+              startTime: local?.startTime,
+              duration: local?.duration,
+            };
+          });
+        }
+        return msg;
+      });
   }
 
   /** WebSocket 回调：工具调用事件 */
@@ -1951,7 +1983,8 @@ export class BioUnixChatView extends ItemView {
       this.doSearch();
     });
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); this.searchJump(e.shiftKey ? -1 : 1); }
+      // ★ 排除 IME 组合输入中
+      if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); this.searchJump(e.shiftKey ? -1 : 1); }
       else if (e.key === 'Escape') { this.closeSearch(); }
     });
     prevBtn.onclick = () => this.searchJump(-1);
@@ -2179,22 +2212,12 @@ export class BioUnixChatView extends ItemView {
     try {
       const msgRes = await this.plugin.api.getMessages(sessionId);
       if (msgRes.ok && msgRes.messages) {
-        this.messages = msgRes.messages.map((m: BioUnixMessage) => ({
-          role: m.role,
-          content: m.content,
-          timestamp: m.timestamp,
-          reasoning: m.reasoning,
-          toolCalls: m.tool_calls ? m.tool_calls.map((tc) => ({
-            toolCallId: tc.id,
-            toolName: tc.function.name,
-            status: 'done' as const,
-            args: tc.function.arguments,
-            timestamp: m.timestamp,
-          })) : undefined,
-        }));
+        // ★ 归并 tool 消息到 assistant.toolCalls，过滤掉独立 tool 消息（避免显示原始 JSON 结果）
+        this.messages = this.normalizeBackendMessages(msgRes.messages);
       }
     } catch { /* ignore */ }
-    this.connectWS();
+    // ★ WS 连接由 main.ts 统一管理：确保已连接即可（不重复建连）
+    this.plugin.ensureWebSocket();
     this.updateStatus();
     this.renderMessages();
     // 关闭面板
@@ -2344,7 +2367,8 @@ export class BioUnixChatView extends ItemView {
       const okBtn = btnRow.createEl('button', { text: '确定', cls: 'mod-cta' });
       cancelBtn.onclick = () => { modal.close(); resolve(null); };
       okBtn.onclick = () => { modal.close(); resolve(input.value); };
-      input.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { modal.close(); resolve(input.value); } });
+      // ★ 排除 IME 组合输入中（中文输入法打英文按回车确认组合）
+      input.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && !ev.isComposing) { modal.close(); resolve(input.value); } });
       modal.open();
     });
     if (!newName || newName === this.sessionName) return;

@@ -138,7 +138,8 @@ export class InteractionModal extends Modal {
         // Esc 由 Modal 基类 onClose 处理（未提交视为 cancelled）
         if (riskClass !== 'critical' && riskClass !== 'high') {
             this.keyHandler = (e: KeyboardEvent): void => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                // ★ 排除 IME 组合输入中（中文输入法打英文按回车确认组合）
+                if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
                     e.preventDefault();
                     e.stopPropagation();
                     document.removeEventListener('keydown', this.keyHandler!, true);

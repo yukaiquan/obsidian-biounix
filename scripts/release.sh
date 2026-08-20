@@ -38,6 +38,7 @@ mkdir -p release
 cp dist/main.js       release/main.js
 cp manifest.json      release/manifest.json
 cp styles.css         release/styles.css
+cp icon.png           release/icon.png
 
 echo "==> release/ 目录内容:"
 ls -la release/
@@ -53,12 +54,12 @@ if [[ "$UPLOAD" == "true" ]]; then
     if gh release view "$VERSION" --repo yukaiquan/obsidian-biounix >/dev/null 2>&1; then
         echo "   release $VERSION 已存在，上传资产..."
         gh release upload "$VERSION" \
-            release/main.js release/manifest.json release/styles.css \
+            release/main.js release/manifest.json release/styles.css release/icon.png \
             --repo yukaiquan/obsidian-biounix --clobber
     else
         echo "   创建新 release $VERSION..."
         gh release create "$VERSION" \
-            release/main.js release/manifest.json release/styles.css \
+            release/main.js release/manifest.json release/styles.css release/icon.png \
             --repo yukaiquan/obsidian-biounix \
             --title "BioUnix Obsidian Plugin v$VERSION" \
             --notes "Release v$VERSION"

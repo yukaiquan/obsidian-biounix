@@ -79,7 +79,7 @@ export interface BioUnixSession {
 
 /** 会话消息 */
 export interface BioUnixMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'system' | 'tool' | 'tool_result';
   content: string;
   timestamp: number;
   /** assistant 消息携带的工具调用（后端 OpenAI 格式，可选） */
@@ -428,6 +428,11 @@ export class BioUnixAPI {
       this.ws = null;
     }
     this.wsListener = null;
+  }
+
+  /** WS 是否已连接（处于 OPEN 状态） */
+  isWSConnected(): boolean {
+    return !!this.ws && this.ws.readyState === WebSocket.OPEN;
   }
 
   private extractPort(): number {

@@ -128,15 +128,17 @@ export default class BioUnixPlugin extends Plugin {
       const leaves = this.app.workspace.getLeavesOfType(BIOUNIX_CHAT_VIEW_TYPE);
       const view = leaves[0]?.view;
       if (view instanceof BioUnixChatView) {
-        if (data.type === 'agent:chunk' && data.content) {
-          view.onStreamChunk(data.content);
-        } else if (data.type === 'agent:done') {
-          view.onStreamDone();
-        } else if (data.type === 'agent:error' && data.error) {
-          view.onStreamChunk(`❌ ${data.error}`);
-        }
+        // ★ 统一分发所有 WS 事件给 view（view 内按 sessionId 过滤 + 分类型处理）
+        view.handleWSEvent(data);
       }
     });
+  }
+
+  /** 确保 WS 已连接（未连接时才建立，避免重复重置连接） */
+  ensureWebSocket(): void {
+    if (!this.api.isWSConnected()) {
+      this.connectWebSocket();
+    }
   }
 
   /** 运行 Vault 扫描 */
